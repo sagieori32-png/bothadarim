@@ -14,14 +14,14 @@
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(135deg,#f7f9ff,#f6f7fb 45%,#fff);font-family:Arial,"Noto Sans Hebrew",sans-serif;color:var(--text)}
-    .wrap{max-width:1040px;margin:0 auto;padding:28px 18px 54px}
+    .wrap{max-width:1120px;margin:0 auto;padding:28px 18px 54px}
     header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
     .brand{display:flex;align-items:center;gap:14px}
     .logo{width:50px;height:50px;border-radius:16px;background:var(--primary);display:grid;place-items:center;color:white;font-size:26px;box-shadow:var(--shadow)}
     h1{margin:0;font-size:26px}
     .sub{margin:4px 0 0;color:var(--muted);font-size:14px}
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
-    @media(max-width:850px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
+    .grid{display:grid;grid-template-columns:1.12fr .88fr;gap:18px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
     .card{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     .chat{padding:18px;min-height:560px;display:flex;flex-direction:column}
     .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:12px}
@@ -32,6 +32,8 @@
     label{display:block;font-weight:700;margin-bottom:7px}
     input,select{width:100%;border:1px solid #d1d5db;border-radius:14px;padding:12px 13px;font-size:15px;background:white}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    @media(max-width:650px){.row,.row3{grid-template-columns:1fr}}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     button{border:0;border-radius:14px;padding:11px 15px;font-weight:700;cursor:pointer;font-size:15px}
     .primary{background:var(--primary);color:#fff}
@@ -44,14 +46,21 @@
     .side{padding:18px}
     .side h2{font-size:18px;margin:0 0 12px}
     table{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:14px}
-    th,td{border-bottom:1px solid var(--line);padding:9px;text-align:right}
+    th,td{border-bottom:1px solid var(--line);padding:9px;text-align:right;vertical-align:middle}
     th{background:#f8fafc;color:#374151}
     .small{font-size:13px;color:var(--muted);line-height:1.5}
     .status{margin-top:12px;padding:12px;border-radius:16px;background:#f8fafc;border:1px solid var(--line)}
     .ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
-    .hidden{display:none}
+    .hidden{display:none!important}
     .admin{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+    .bookingsBox,.adminBox{margin-top:16px;max-height:390px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
+    .emptyState{padding:14px;color:var(--muted);font-size:14px}
     textarea{width:100%;height:110px;border:1px solid #d1d5db;border-radius:14px;padding:10px;font-size:13px;direction:ltr}
+    .topActions{display:flex;gap:10px;flex-wrap:wrap}
+    .toggle{display:flex;align-items:center;gap:7px;white-space:nowrap}
+    .toggle input{width:auto}
+    .loginBox{padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}
+    .inactive{opacity:.55}
   </style>
 </head>
 <body>
@@ -64,7 +73,10 @@
         <p class="sub">שיבוץ עצמי למורים מן החוץ לפי סמסטר, יום, שעה והעדפת חדר</p>
       </div>
     </div>
-    <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
+    <div class="topActions">
+      <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
+      <button class="secondary" onclick="toggleAdmin()">מערכת ניהול</button>
+    </div>
   </header>
 
   <div class="grid">
@@ -74,7 +86,7 @@
     </section>
 
     <aside class="card side">
-      <h2>מצאי חדרים</h2>
+      <h2>מצאי חדרים פעילים לשיבוץ</h2>
       <table id="roomsTable"></table>
       <div class="status">
         <div><span class="ok">●</span> חדר יחיד = מתאים למורה אחד/ת בלבד</div>
@@ -82,8 +94,53 @@
       </div>
 
       <div class="admin">
+        <h2>שיבוצים קיימים במערכת</h2>
+        <p class="small">ניתן להציג את כל השיבוצים שנשמרו עד כה בדפדפן המקומי.</p>
+        <div class="actions">
+          <button class="secondary" onclick="renderBookingsTable()">הצג / רענן טבלת שיבוצים</button>
+          <button class="ghost" onclick="hideBookingsTable()">הסתר טבלה</button>
+        </div>
+        <div id="bookingsBox" class="bookingsBox hidden"></div>
+      </div>
+
+      <div class="admin hidden" id="adminSection">
+        <h2>מערכת ניהול</h2>
+        <div id="adminLogin" class="loginBox">
+          <div class="row">
+            <div><label>שם משתמש</label><input id="adminUser" placeholder="ADMIN"></div>
+            <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="ADMIN135"></div>
+          </div>
+          <div class="actions"><button class="primary" onclick="adminLogin()">כניסה לניהול</button></div>
+          <p class="small">ברירת מחדל: שם משתמש ADMIN, סיסמה ADMIN135.</p>
+        </div>
+
+        <div id="adminPanel" class="hidden">
+          <p class="small">כאן ניתן לקבוע אילו חדרים רלוונטיים לשנת הלימודים, לשנות פרטי חדרים קיימים ולהוסיף חדרים חדשים.</p>
+          <div class="actions">
+            <button class="secondary" onclick="renderAdminRooms()">רענון רשימת חדרים</button>
+            <button class="ghost" onclick="adminLogout()">יציאה מניהול</button>
+          </div>
+          <div id="adminRoomsBox" class="adminBox"></div>
+
+          <div class="admin">
+            <h2>הוספת חדר חדש</h2>
+            <div class="row3">
+              <div><label>מספר/שם חדר</label><input id="newRoomName" placeholder="לדוגמה: 422"></div>
+              <div><label>סוג חדר</label><select id="newRoomType"><option value="single">חדר יחיד</option><option value="shared">כמה עמדות</option></select></div>
+              <div><label>מספר עמדות</label><input id="newRoomStations" type="number" min="1" value="1"></div>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <div><label>מידע כניסה / סיסמה</label><input id="newRoomPassword" placeholder="לדוגמה: 422422 מפתח"></div>
+              <div><label>פעיל לשיבוץ?</label><select id="newRoomActive"><option value="true">כן</option><option value="false">לא</option></select></div>
+            </div>
+            <div class="actions"><button class="primary" onclick="addRoom()">הוסף חדר</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin">
         <h2>ניהול נתונים</h2>
-        <p class="small">השיבוצים נשמרים בדפדפן המקומי. לחיבור מלא ל־Google Sheets יש להחליף את פונקציות השמירה/טעינה בקריאת Apps Script.</p>
+        <p class="small">השיבוצים והחדרים נשמרים בדפדפן המקומי. לחיבור מלא ל־Google Sheets יש להחליף את פונקציות השמירה/טעינה בקריאת Apps Script.</p>
         <div class="actions">
           <button class="secondary" onclick="exportBookings()">ייצוא שיבוצים JSON</button>
           <button class="danger" onclick="clearBookings()">מחיקת כל השיבוצים</button>
@@ -95,15 +152,15 @@
 </div>
 
 <script>
-const ROOMS = [
-  {id:"409א", name:"409 א׳", type:"shared", stations:2, password:"123654 מפתח"},
-  {id:"213", name:"213", type:"single", stations:1, password:"213312 מפתח"},
-  {id:"210", name:"210", type:"single", stations:1, password:"210012 מפתח"},
-  {id:"212", name:"212", type:"single", stations:1, password:"212121 מפתח"},
-  {id:"406", name:"406", type:"shared", stations:2, password:"321456 מפתח"},
-  {id:"513", name:"513", type:"shared", stations:2, password:"1235"},
-  {id:"535", name:"535", type:"single", stations:1, password:"535365 מפתח"},
-  {id:"509א", name:"509 א׳", type:"single", stations:1, password:"509#"}
+const DEFAULT_ROOMS = [
+  {id:"409א", name:"409 א׳", type:"shared", stations:2, password:"123654 מפתח", active:true},
+  {id:"213", name:"213", type:"single", stations:1, password:"213312 מפתח", active:true},
+  {id:"210", name:"210", type:"single", stations:1, password:"210012 מפתח", active:true},
+  {id:"212", name:"212", type:"single", stations:1, password:"212121 מפתח", active:true},
+  {id:"406", name:"406", type:"shared", stations:2, password:"321456 מפתח", active:true},
+  {id:"513", name:"513", type:"shared", stations:2, password:"1235", active:true},
+  {id:"535", name:"535", type:"single", stations:1, password:"535365 מפתח", active:true},
+  {id:"509א", name:"509 א׳", type:"single", stations:1, password:"509#", active:true}
 ];
 
 const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי"];
@@ -120,6 +177,18 @@ let state = {
   options: []
 };
 
+function rooms(){
+  const saved = JSON.parse(localStorage.getItem("teacherRooms") || "null");
+  if(saved && Array.isArray(saved)) return saved;
+  localStorage.setItem("teacherRooms", JSON.stringify(DEFAULT_ROOMS));
+  return DEFAULT_ROOMS;
+}
+function saveRooms(arr){
+  localStorage.setItem("teacherRooms", JSON.stringify(arr));
+}
+function activeRooms(){
+  return rooms().filter(r => r.active !== false);
+}
 function bookings(){
   return JSON.parse(localStorage.getItem("teacherRoomBookings") || "[]");
 }
@@ -148,8 +217,9 @@ function resetBot(){
   init();
 }
 function renderRooms(){
-  const rows = ROOMS.map(r => `<tr><td>${r.name}</td><td>${r.type==="single"?"יחיד":"כמה עמדות"}</td><td>${r.stations}</td></tr>`).join("");
-  document.getElementById("roomsTable").innerHTML = `<tr><th>חדר</th><th>סוג</th><th>עמדות</th></tr>${rows}`;
+  const active = activeRooms();
+  const rows = active.map(r => `<tr><td>${r.name}</td><td>${r.type==="single"?"יחיד":"כמה עמדות"}</td><td>${r.stations}</td></tr>`).join("");
+  document.getElementById("roomsTable").innerHTML = `<tr><th>חדר</th><th>סוג</th><th>עמדות</th></tr>${rows || `<tr><td colspan="3">אין חדרים פעילים לשיבוץ</td></tr>`}`;
 }
 
 function askName(){
@@ -221,7 +291,7 @@ function findOptions(){
   const need = document.getElementById("roomNeed").value;
   state.form.roomNeed = need;
   userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
-  const options = ROOMS
+  const options = activeRooms()
     .filter(r => roomAllowed(r, need))
     .map(r => ({room:r, used:roomCapacityUsed(r.id, state.form)}))
     .filter(x => x.used < x.room.stations)
@@ -265,6 +335,7 @@ function book(i){
     roomName: chosen.name
   };
   const arr = bookings(); arr.push(record); saveBookings(arr);
+  if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   userSays(`בחרתי חדר ${chosen.name}`);
   addMsg(`השיבוץ בוצע בהצלחה.
 
@@ -296,14 +367,132 @@ function findExisting(){
 }
 function deleteBooking(id){
   saveBookings(bookings().filter(b=>b.id!==id));
+  if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
   setPanel(`<div class="actions"><button class="primary" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" onclick="startChange()">חיפוש נוסף</button></div>`);
 }
+function renderBookingsTable(){
+  const box = document.getElementById("bookingsBox");
+  const arr = bookings().slice().sort((a,b) =>
+    (a.semester + a.day + a.roomName + a.start).localeCompare(b.semester + b.day + b.roomName + b.start, "he")
+  );
+  box.classList.remove("hidden");
+  if(!arr.length){
+    box.innerHTML = `<div class="emptyState">עדיין אין שיבוצים קיימים במערכת.</div>`;
+    return;
+  }
+  const rows = arr.map(b => `<tr>
+    <td>${b.roomName}</td>
+    <td>${b.teacherName}</td>
+    <td>${b.semester}</td>
+    <td>${b.day}</td>
+    <td>${b.start}–${b.end}</td>
+  </tr>`).join("");
+  box.innerHTML = `<table>
+    <tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th></tr>
+    ${rows}
+  </table>`;
+}
+function hideBookingsTable(){
+  const box = document.getElementById("bookingsBox");
+  box.classList.add("hidden");
+  box.innerHTML = "";
+}
+
+/* Admin */
+function toggleAdmin(){
+  document.getElementById("adminSection").classList.toggle("hidden");
+}
+function adminLogin(){
+  const u = document.getElementById("adminUser").value.trim();
+  const p = document.getElementById("adminPass").value.trim();
+  if(u === "ADMIN" && p === "ADMIN135"){
+    document.getElementById("adminLogin").classList.add("hidden");
+    document.getElementById("adminPanel").classList.remove("hidden");
+    renderAdminRooms();
+  } else {
+    alert("שם משתמש או סיסמה שגויים");
+  }
+}
+function adminLogout(){
+  document.getElementById("adminLogin").classList.remove("hidden");
+  document.getElementById("adminPanel").classList.add("hidden");
+  document.getElementById("adminUser").value = "";
+  document.getElementById("adminPass").value = "";
+}
+function renderAdminRooms(){
+  const box = document.getElementById("adminRoomsBox");
+  const arr = rooms();
+  const rows = arr.map((r,i)=>`<tr class="${r.active===false?'inactive':''}">
+    <td><input value="${r.name}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
+    <td>
+      <select onchange="updateRoomField(${i}, 'type', this.value)">
+        <option value="single" ${r.type==="single"?"selected":""}>יחיד</option>
+        <option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option>
+      </select>
+    </td>
+    <td><input type="number" min="1" value="${r.stations}" onchange="updateRoomField(${i}, 'stations', this.value)"></td>
+    <td><input value="${r.password || ""}" onchange="updateRoomField(${i}, 'password', this.value)"></td>
+    <td class="toggle"><input type="checkbox" ${r.active!==false?"checked":""} onchange="updateRoomField(${i}, 'active', this.checked)"> פעיל</td>
+    <td><button class="danger" onclick="deleteRoom(${i})">מחיקה</button></td>
+  </tr>`).join("");
+  box.innerHTML = `<table>
+    <tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>
+    ${rows}
+  </table>`;
+}
+function updateRoomField(index, field, value){
+  const arr = rooms();
+  if(field === "stations") value = Math.max(1, Number(value || 1));
+  if(field === "name"){
+    value = value.trim();
+    if(!value) return alert("שם חדר לא יכול להיות ריק");
+    arr[index].id = value.replace(/\s/g,"");
+  }
+  arr[index][field] = value;
+  saveRooms(arr);
+  renderRooms();
+  if(!document.getElementById("adminRoomsBox").innerHTML.includes("table")) renderAdminRooms();
+}
+function addRoom(){
+  const name = document.getElementById("newRoomName").value.trim();
+  const type = document.getElementById("newRoomType").value;
+  const stations = Math.max(1, Number(document.getElementById("newRoomStations").value || 1));
+  const password = document.getElementById("newRoomPassword").value.trim();
+  const active = document.getElementById("newRoomActive").value === "true";
+  if(!name) return alert("נא להזין מספר/שם חדר");
+  const arr = rooms();
+  const id = name.replace(/\s/g,"");
+  if(arr.some(r => r.id === id)) return alert("חדר בשם זה כבר קיים");
+  arr.push({id, name, type, stations, password, active});
+  saveRooms(arr);
+  document.getElementById("newRoomName").value = "";
+  document.getElementById("newRoomPassword").value = "";
+  document.getElementById("newRoomStations").value = "1";
+  renderRooms();
+  renderAdminRooms();
+  alert("החדר נוסף בהצלחה");
+}
+function deleteRoom(index){
+  const arr = rooms();
+  const room = arr[index];
+  const hasBookings = bookings().some(b => b.roomId === room.id);
+  if(hasBookings && !confirm("יש שיבוצים קיימים לחדר זה. מחיקת החדר לא תמחק את השיבוצים הישנים, אך החדר לא יוצע יותר. להמשיך?")) return;
+  if(!hasBookings && !confirm("למחוק את החדר מהרשימה?")) return;
+  arr.splice(index,1);
+  saveRooms(arr);
+  renderRooms();
+  renderAdminRooms();
+}
 function exportBookings(){
-  document.getElementById("exportBox").value = JSON.stringify(bookings(), null, 2);
+  document.getElementById("exportBox").value = JSON.stringify({rooms: rooms(), bookings: bookings()}, null, 2);
 }
 function clearBookings(){
-  if(confirm("למחוק את כל השיבוצים?")){ saveBookings([]); addMsg("כל השיבוצים נמחקו."); }
+  if(confirm("למחוק את כל השיבוצים?")){
+    saveBookings([]);
+    addMsg("כל השיבוצים נמחקו.");
+    if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
+  }
 }
 init();
 </script>
