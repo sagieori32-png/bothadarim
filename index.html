@@ -52,15 +52,20 @@
     .status{margin-top:12px;padding:12px;border-radius:16px;background:#f8fafc;border:1px solid var(--line)}
     .ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
     .hidden{display:none!important}
-    .admin{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+    .adminBlock{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
     .bookingsBox,.adminBox{margin-top:16px;max-height:390px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
     .emptyState{padding:14px;color:var(--muted);font-size:14px}
-    textarea{width:100%;height:110px;border:1px solid #d1d5db;border-radius:14px;padding:10px;font-size:13px;direction:ltr}
+    textarea{width:100%;height:150px;border:1px solid #d1d5db;border-radius:14px;padding:10px;font-size:13px;direction:ltr}
     .topActions{display:flex;gap:10px;flex-wrap:wrap}
     .toggle{display:flex;align-items:center;gap:7px;white-space:nowrap}
     .toggle input{width:auto}
     .loginBox{padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}
     .inactive{opacity:.55}
+    .modalOverlay{position:fixed;inset:0;background:rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center;padding:18px;z-index:9999}
+    .modal{background:#fff;border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.22);width:min(980px,100%);max-height:90vh;overflow:auto;padding:20px;border:1px solid var(--line)}
+    .modalHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+    .modalHeader h2{margin:0}
+    code{direction:ltr;display:inline-block;background:#f3f4f6;padding:2px 6px;border-radius:7px}
   </style>
 </head>
 <body>
@@ -74,8 +79,8 @@
       </div>
     </div>
     <div class="topActions">
-      <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
-      <button class="secondary" onclick="toggleAdmin()">מערכת ניהול</button>
+      <button class="ghost" type="button" onclick="resetBot()">התחלה מחדש</button>
+      <button class="secondary" type="button" onclick="openAdmin()">מערכת ניהול</button>
     </div>
   </header>
 
@@ -93,61 +98,79 @@
         <div><span class="warn">●</span> חדר עם כמה עמדות = מאפשר שיבוץ מקביל</div>
       </div>
 
-      <div class="admin">
+      <div class="adminBlock">
         <h2>שיבוצים קיימים במערכת</h2>
-        <p class="small">ניתן להציג את כל השיבוצים שנשמרו עד כה בדפדפן המקומי.</p>
+        <p class="small">הטבלה נטענת מ־Google Sheets אם הוגדר חיבור; אחרת מהדפדפן המקומי.</p>
         <div class="actions">
-          <button class="secondary" onclick="renderBookingsTable()">הצג / רענן טבלת שיבוצים</button>
-          <button class="ghost" onclick="hideBookingsTable()">הסתר טבלה</button>
+          <button class="secondary" type="button" onclick="renderBookingsTable()">הצג / רענן טבלת שיבוצים</button>
+          <button class="ghost" type="button" onclick="hideBookingsTable()">הסתר טבלה</button>
         </div>
         <div id="bookingsBox" class="bookingsBox hidden"></div>
       </div>
 
-      <div class="admin hidden" id="adminSection">
-        <h2>מערכת ניהול</h2>
-        <div id="adminLogin" class="loginBox">
-          <div class="row">
-            <div><label>שם משתמש</label><input id="adminUser" placeholder="ADMIN"></div>
-            <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="ADMIN135"></div>
-          </div>
-          <div class="actions"><button class="primary" onclick="adminLogin()">כניסה לניהול</button></div>
-          <p class="small">ברירת מחדל: שם משתמש ADMIN, סיסמה ADMIN135.</p>
+      <div class="adminBlock">
+        <h2>חיבור ל־Google Sheets</h2>
+        <p class="small">יש להדביק כאן כתובת Web App של Google Apps Script. לאחר מכן החדרים והשיבוצים יישמרו בגיליון.</p>
+        <label>כתובת Web App</label>
+        <input id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="actions">
+          <button class="primary" type="button" onclick="saveApiUrl()">שמור חיבור</button>
+          <button class="secondary" type="button" onclick="loadRemoteData()">טען נתונים מהגיליון</button>
         </div>
-
-        <div id="adminPanel" class="hidden">
-          <p class="small">כאן ניתן לקבוע אילו חדרים רלוונטיים לשנת הלימודים, לשנות פרטי חדרים קיימים ולהוסיף חדרים חדשים.</p>
-          <div class="actions">
-            <button class="secondary" onclick="renderAdminRooms()">רענון רשימת חדרים</button>
-            <button class="ghost" onclick="adminLogout()">יציאה מניהול</button>
-          </div>
-          <div id="adminRoomsBox" class="adminBox"></div>
-
-          <div class="admin">
-            <h2>הוספת חדר חדש</h2>
-            <div class="row3">
-              <div><label>מספר/שם חדר</label><input id="newRoomName" placeholder="לדוגמה: 422"></div>
-              <div><label>סוג חדר</label><select id="newRoomType"><option value="single">חדר יחיד</option><option value="shared">כמה עמדות</option></select></div>
-              <div><label>מספר עמדות</label><input id="newRoomStations" type="number" min="1" value="1"></div>
-            </div>
-            <div class="row" style="margin-top:10px">
-              <div><label>מידע כניסה / סיסמה</label><input id="newRoomPassword" placeholder="לדוגמה: 422422 מפתח"></div>
-              <div><label>פעיל לשיבוץ?</label><select id="newRoomActive"><option value="true">כן</option><option value="false">לא</option></select></div>
-            </div>
-            <div class="actions"><button class="primary" onclick="addRoom()">הוסף חדר</button></div>
-          </div>
-        </div>
+        <p id="syncStatus" class="small"></p>
       </div>
 
-      <div class="admin">
+      <div class="adminBlock">
         <h2>ניהול נתונים</h2>
-        <p class="small">השיבוצים והחדרים נשמרים בדפדפן המקומי. לחיבור מלא ל־Google Sheets יש להחליף את פונקציות השמירה/טעינה בקריאת Apps Script.</p>
+        <p class="small">ייצוא הנתונים משמש לגיבוי. לאחר חיבור ל־Sheets, המקור המרכזי הוא הגיליון.</p>
         <div class="actions">
-          <button class="secondary" onclick="exportBookings()">ייצוא שיבוצים JSON</button>
-          <button class="danger" onclick="clearBookings()">מחיקת כל השיבוצים</button>
+          <button class="secondary" type="button" onclick="exportData()">ייצוא JSON</button>
+          <button class="danger" type="button" onclick="clearBookings()">מחיקת כל השיבוצים</button>
         </div>
         <textarea id="exportBox" placeholder="כאן יופיע ייצוא הנתונים"></textarea>
       </div>
     </aside>
+  </div>
+</div>
+
+<div id="adminModal" class="modalOverlay hidden">
+  <div class="modal">
+    <div class="modalHeader">
+      <h2>מערכת ניהול</h2>
+      <button class="ghost" type="button" onclick="closeAdmin()">סגירה</button>
+    </div>
+
+    <div id="adminLogin" class="loginBox">
+      <div class="row">
+        <div><label>שם משתמש</label><input id="adminUser" placeholder="ADMIN"></div>
+        <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="ADMIN135"></div>
+      </div>
+      <div class="actions"><button class="primary" type="button" onclick="adminLogin()">כניסה לניהול</button></div>
+      <p class="small">ברירת מחדל: שם משתמש <code>ADMIN</code>, סיסמה <code>ADMIN135</code>.</p>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <p class="small">כאן ניתן לקבוע אילו חדרים רלוונטיים לשנת הלימודים, לשנות פרטי חדרים קיימים ולהוסיף חדרים חדשים. השינויים יישמרו ב־Google Sheets כאשר מוגדר חיבור.</p>
+      <div class="actions">
+        <button class="secondary" type="button" onclick="renderAdminRooms()">רענון רשימת חדרים</button>
+        <button class="ghost" type="button" onclick="adminLogout()">יציאה מניהול</button>
+      </div>
+      <div id="adminRoomsBox" class="adminBox"></div>
+
+      <div class="adminBlock">
+        <h2>הוספת חדר חדש</h2>
+        <div class="row3">
+          <div><label>מספר/שם חדר</label><input id="newRoomName" placeholder="לדוגמה: 422"></div>
+          <div><label>סוג חדר</label><select id="newRoomType"><option value="single">חדר יחיד</option><option value="shared">כמה עמדות</option></select></div>
+          <div><label>מספר עמדות</label><input id="newRoomStations" type="number" min="1" value="1"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>מידע כניסה / סיסמה</label><input id="newRoomPassword" placeholder="לדוגמה: 422422 מפתח"></div>
+          <div><label>פעיל לשיבוץ?</label><select id="newRoomActive"><option value="true">כן</option><option value="false">לא</option></select></div>
+        </div>
+        <div class="actions"><button class="primary" type="button" onclick="addRoom()">הוסף חדר</button></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -171,30 +194,78 @@ for(let h=8; h<=18; h++){
   if(h<18) HOURS.push(String(h).padStart(2,"0")+":30");
 }
 
-let state = {
-  step: "name",
-  form: {name:"", semester:"", day:"", start:"", end:"", roomNeed:""},
-  options: []
-};
+let state = { form: {name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options: [] };
 
-function rooms(){
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbztKEAxJuahs0sO7S_ELdqR1ThaPfnO5FQjwjFiOetVwQyNzHFkseVWUzhhxxV3yCjxiw/exec";
+function apiUrl(){ return localStorage.getItem("teacherRoomApiUrl") || DEFAULT_API_URL; }
+function saveApiUrl(){
+  const v = document.getElementById("apiUrlInput").value.trim();
+  localStorage.setItem("teacherRoomApiUrl", v);
+  syncMsg(v ? "כתובת החיבור נשמרה." : "כתובת החיבור נמחקה.");
+}
+function syncMsg(t){ document.getElementById("syncStatus").textContent = t; }
+
+async function api(action, payload={}){
+  const url = apiUrl();
+  if(!url) throw new Error("לא הוגדרה כתובת Web App");
+  const res = await fetch(url, {
+    method:"POST",
+    mode:"cors",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action, ...payload})
+  });
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || "שגיאה לא ידועה");
+  return data;
+}
+
+function localRooms(){
   const saved = JSON.parse(localStorage.getItem("teacherRooms") || "null");
   if(saved && Array.isArray(saved)) return saved;
   localStorage.setItem("teacherRooms", JSON.stringify(DEFAULT_ROOMS));
   return DEFAULT_ROOMS;
 }
-function saveRooms(arr){
-  localStorage.setItem("teacherRooms", JSON.stringify(arr));
+function saveLocalRooms(arr){ localStorage.setItem("teacherRooms", JSON.stringify(arr)); }
+function rooms(){ return localRooms(); }
+function activeRooms(){ return rooms().filter(r => r.active !== false); }
+function bookings(){ return JSON.parse(localStorage.getItem("teacherRoomBookings") || "[]"); }
+function saveLocalBookings(arr){ localStorage.setItem("teacherRoomBookings", JSON.stringify(arr)); }
+
+async function loadRemoteData(){
+  try{
+    syncMsg("טוען נתונים מהגיליון...");
+    const data = await api("getData");
+    saveLocalRooms(data.rooms && data.rooms.length ? data.rooms : DEFAULT_ROOMS);
+    saveLocalBookings(data.bookings || []);
+    renderRooms();
+    if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
+    if(!document.getElementById("adminPanel").classList.contains("hidden")) renderAdminRooms();
+    syncMsg("הנתונים נטענו בהצלחה מ־Google Sheets.");
+  }catch(e){
+    syncMsg("לא ניתן לטעון מהגיליון: " + e.message);
+  }
 }
-function activeRooms(){
-  return rooms().filter(r => r.active !== false);
+async function saveRoomToRemote(room){
+  if(!apiUrl()) return;
+  await api("upsertRoom", {room});
 }
-function bookings(){
-  return JSON.parse(localStorage.getItem("teacherRoomBookings") || "[]");
+async function deleteRoomRemote(roomId){
+  if(!apiUrl()) return;
+  await api("deleteRoom", {roomId});
 }
-function saveBookings(arr){
-  localStorage.setItem("teacherRoomBookings", JSON.stringify(arr));
+async function saveBookingToRemote(booking){
+  if(!apiUrl()) return;
+  await api("addBooking", {booking});
 }
+async function deleteBookingRemote(id){
+  if(!apiUrl()) return;
+  await api("deleteBooking", {id});
+}
+async function clearBookingsRemote(){
+  if(!apiUrl()) return;
+  await api("clearBookings", {});
+}
+
 function addMsg(text, who="bot"){
   const el = document.createElement("div");
   el.className = "msg " + who;
@@ -206,12 +277,14 @@ function setPanel(html){ document.getElementById("panel").innerHTML = html; }
 function userSays(text){ addMsg(text, "user"); }
 
 function init(){
+  document.getElementById("apiUrlInput").value = apiUrl();
   renderRooms();
   addMsg("שלום, אני בוט השיבוץ לשעות קבלה. נתחיל בכמה שאלות קצרות כדי למצוא חדר מתאים.");
   askName();
+  loadRemoteData();
 }
 function resetBot(){
-  state = {step:"name", form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
+  state = {form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
   document.getElementById("messages").innerHTML = "";
   document.getElementById("exportBox").value = "";
   init();
@@ -224,7 +297,7 @@ function renderRooms(){
 
 function askName(){
   setPanel(`<label>שם מלא</label><input id="name" placeholder="לדוגמה: ד״ר ישראל ישראלי" autofocus>
-  <div class="actions"><button class="primary" onclick="saveName()">המשך</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="saveName()">המשך</button></div>`);
 }
 function saveName(){
   const v = document.getElementById("name").value.trim();
@@ -234,28 +307,22 @@ function saveName(){
 function askSemester(){
   addMsg("באיזה סמסטר מתקיימת שעת הקבלה?");
   setPanel(`<label>סמסטר</label><select id="semester">${SEMESTERS.map(s=>`<option>${s}</option>`).join("")}</select>
-  <div class="actions"><button class="primary" onclick="saveSemester()">המשך</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="saveSemester()">המשך</button></div>`);
 }
-function saveSemester(){
-  const v = document.getElementById("semester").value;
-  state.form.semester = v; userSays(v); askDay();
-}
+function saveSemester(){ const v = document.getElementById("semester").value; state.form.semester = v; userSays(v); askDay(); }
 function askDay(){
   addMsg("באיזה יום בשבוע?");
   setPanel(`<label>יום</label><select id="day">${DAYS.map(d=>`<option>${d}</option>`).join("")}</select>
-  <div class="actions"><button class="primary" onclick="saveDay()">המשך</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="saveDay()">המשך</button></div>`);
 }
-function saveDay(){
-  const v = document.getElementById("day").value;
-  state.form.day = v; userSays(v); askHours();
-}
+function saveDay(){ const v = document.getElementById("day").value; state.form.day = v; userSays(v); askHours(); }
 function askHours(){
   addMsg("באילו שעות נדרשת שעת הקבלה?");
   setPanel(`<div class="row">
     <div><label>שעת התחלה</label><select id="start">${HOURS.map(h=>`<option>${h}</option>`).join("")}</select></div>
     <div><label>שעת סיום</label><select id="end">${HOURS.map(h=>`<option>${h}</option>`).join("")}</select></div>
   </div>
-  <div class="actions"><button class="primary" onclick="saveHours()">המשך</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="saveHours()">המשך</button></div>`);
 }
 function saveHours(){
   const start = document.getElementById("start").value;
@@ -270,24 +337,20 @@ function askRoomNeed(){
     <option value="shared">אפשר חדר עם כמה עמדות</option>
     <option value="any">אין העדפה</option>
   </select>
-  <div class="actions"><button class="primary" onclick="findOptions()">מצא חדרים פנויים</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="findOptions()">מצא חדרים פנויים</button></div>`);
 }
 function timeToMin(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
-function overlap(aStart,aEnd,bStart,bEnd){
-  return timeToMin(aStart) < timeToMin(bEnd) && timeToMin(bStart) < timeToMin(aEnd);
-}
+function overlap(aStart,aEnd,bStart,bEnd){ return timeToMin(aStart) < timeToMin(bEnd) && timeToMin(bStart) < timeToMin(aEnd); }
 function roomCapacityUsed(roomId, f){
-  return bookings().filter(b =>
-    b.semester===f.semester && b.day===f.day && b.roomId===roomId &&
-    overlap(b.start,b.end,f.start,f.end)
-  ).length;
+  return bookings().filter(b => b.semester===f.semester && b.day===f.day && b.roomId===roomId && overlap(b.start,b.end,f.start,f.end)).length;
 }
 function roomAllowed(room, need){
   if(need==="single") return room.type==="single";
   if(need==="shared") return room.type==="shared" || room.type==="single";
   return true;
 }
-function findOptions(){
+async function findOptions(){
+  if(apiUrl()) await loadRemoteData();
   const need = document.getElementById("roomNeed").value;
   state.form.roomNeed = need;
   userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
@@ -300,10 +363,10 @@ function findOptions(){
   if(!options.length){
     addMsg("לא נמצאו חדרים פנויים לפי הבחירה. אפשר לשנות יום/שעה/סוג חדר ולבדוק שוב.");
     setPanel(`<div class="actions">
-      <button class="secondary" onclick="askDay()">שינוי יום</button>
-      <button class="secondary" onclick="askHours()">שינוי שעות</button>
-      <button class="secondary" onclick="askRoomNeed()">שינוי סוג חדר</button>
-      <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
+      <button class="secondary" type="button" onclick="askDay()">שינוי יום</button>
+      <button class="secondary" type="button" onclick="askHours()">שינוי שעות</button>
+      <button class="secondary" type="button" onclick="askRoomNeed()">שינוי סוג חדר</button>
+      <button class="ghost" type="button" onclick="resetBot()">התחלה מחדש</button>
     </div>`);
     return;
   }
@@ -317,14 +380,14 @@ function renderOptions(){
       <span class="pill">${x.room.type==="single"?"חדר יחיד":"כמה עמדות"}</span>
       <span class="pill">${x.room.stations-x.used} עמדות פנויות</span>
       <span class="pill">${state.form.day}, ${state.form.start}–${state.form.end}</span>
-      <div class="actions"><button class="primary" onclick="book(${i})">בחר/י ושבץ/י</button></div>
+      <div class="actions"><button class="primary" type="button" onclick="book(${i})">בחר/י ושבץ/י</button></div>
     </div>`).join("");
-  setPanel(html + `<div class="actions"><button class="ghost" onclick="askRoomNeed()">בדיקה אחרת</button></div>`);
+  setPanel(html + `<div class="actions"><button class="ghost" type="button" onclick="askRoomNeed()">בדיקה אחרת</button></div>`);
 }
-function book(i){
+async function book(i){
   const chosen = state.options[i].room;
   const record = {
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
     createdAt: new Date().toISOString(),
     teacherName: state.form.name,
     semester: state.form.semester,
@@ -334,7 +397,8 @@ function book(i){
     roomId: chosen.id,
     roomName: chosen.name
   };
-  const arr = bookings(); arr.push(record); saveBookings(arr);
+  const arr = bookings(); arr.push(record); saveLocalBookings(arr);
+  try{ await saveBookingToRemote(record); syncMsg("השיבוץ נשמר ב־Google Sheets."); }catch(e){ syncMsg("השיבוץ נשמר מקומית בלבד: " + e.message); }
   if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   userSays(`בחרתי חדר ${chosen.name}`);
   addMsg(`השיבוץ בוצע בהצלחה.
@@ -345,14 +409,14 @@ function book(i){
 חדר: ${chosen.name}
 מידע כניסה: ${chosen.password}`);
   setPanel(`<div class="actions">
-    <button class="primary" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
-    <button class="secondary" onclick="startChange()">שינוי שיבוץ קיים</button>
+    <button class="primary" type="button" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
+    <button class="secondary" type="button" onclick="startChange()">שינוי שיבוץ קיים</button>
   </div>`);
 }
 function startChange(){
   addMsg("כדי לשנות שיבוץ קיים, הזן/י שם מלא ואציג שיבוצים קיימים למחיקה או שיבוץ מחדש.");
   setPanel(`<label>שם מלא לחיפוש</label><input id="findName" placeholder="שם מלא">
-  <div class="actions"><button class="primary" onclick="findExisting()">חיפוש שיבוצים</button></div>`);
+  <div class="actions"><button class="primary" type="button" onclick="findExisting()">חיפוש שיבוצים</button></div>`);
 }
 function findExisting(){
   const name = document.getElementById("findName").value.trim();
@@ -361,48 +425,33 @@ function findExisting(){
   const html = arr.map(b=>`<div class="opt">
     <h3>${b.teacherName}</h3>
     <span class="pill">חדר ${b.roomName}</span><span class="pill">${b.semester}</span><span class="pill">${b.day}, ${b.start}–${b.end}</span>
-    <div class="actions"><button class="danger" onclick="deleteBooking('${b.id}')">מחק/י שיבוץ זה</button></div>
+    <div class="actions"><button class="danger" type="button" onclick="deleteBooking('${b.id}')">מחק/י שיבוץ זה</button></div>
   </div>`).join("");
-  setPanel(html + `<div class="actions"><button class="primary" onclick="resetBot()">בצע/י שיבוץ חדש</button></div>`);
+  setPanel(html + `<div class="actions"><button class="primary" type="button" onclick="resetBot()">בצע/י שיבוץ חדש</button></div>`);
 }
-function deleteBooking(id){
-  saveBookings(bookings().filter(b=>b.id!==id));
+async function deleteBooking(id){
+  saveLocalBookings(bookings().filter(b=>b.id!==id));
+  try{ await deleteBookingRemote(id); syncMsg("השיבוץ נמחק מ־Google Sheets."); }catch(e){ syncMsg("השיבוץ נמחק מקומית בלבד: " + e.message); }
   if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
-  setPanel(`<div class="actions"><button class="primary" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" onclick="startChange()">חיפוש נוסף</button></div>`);
+  setPanel(`<div class="actions"><button class="primary" type="button" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" type="button" onclick="startChange()">חיפוש נוסף</button></div>`);
 }
 function renderBookingsTable(){
   const box = document.getElementById("bookingsBox");
-  const arr = bookings().slice().sort((a,b) =>
-    (a.semester + a.day + a.roomName + a.start).localeCompare(b.semester + b.day + b.roomName + b.start, "he")
-  );
+  const arr = bookings().slice().sort((a,b) => (a.semester + a.day + a.roomName + a.start).localeCompare(b.semester + b.day + b.roomName + b.start, "he"));
   box.classList.remove("hidden");
-  if(!arr.length){
-    box.innerHTML = `<div class="emptyState">עדיין אין שיבוצים קיימים במערכת.</div>`;
-    return;
-  }
-  const rows = arr.map(b => `<tr>
-    <td>${b.roomName}</td>
-    <td>${b.teacherName}</td>
-    <td>${b.semester}</td>
-    <td>${b.day}</td>
-    <td>${b.start}–${b.end}</td>
-  </tr>`).join("");
-  box.innerHTML = `<table>
-    <tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th></tr>
-    ${rows}
-  </table>`;
+  if(!arr.length){ box.innerHTML = `<div class="emptyState">עדיין אין שיבוצים קיימים במערכת.</div>`; return; }
+  const rows = arr.map(b => `<tr><td>${b.roomName}</td><td>${b.teacherName}</td><td>${b.semester}</td><td>${b.day}</td><td>${b.start}–${b.end}</td></tr>`).join("");
+  box.innerHTML = `<table><tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th></tr>${rows}</table>`;
 }
-function hideBookingsTable(){
-  const box = document.getElementById("bookingsBox");
-  box.classList.add("hidden");
-  box.innerHTML = "";
-}
+function hideBookingsTable(){ const box = document.getElementById("bookingsBox"); box.classList.add("hidden"); box.innerHTML = ""; }
 
 /* Admin */
-function toggleAdmin(){
-  document.getElementById("adminSection").classList.toggle("hidden");
+function openAdmin(){
+  document.getElementById("adminModal").classList.remove("hidden");
+  document.getElementById("adminUser").focus();
 }
+function closeAdmin(){ document.getElementById("adminModal").classList.add("hidden"); }
 function adminLogin(){
   const u = document.getElementById("adminUser").value.trim();
   const p = document.getElementById("adminPass").value.trim();
@@ -410,9 +459,7 @@ function adminLogin(){
     document.getElementById("adminLogin").classList.add("hidden");
     document.getElementById("adminPanel").classList.remove("hidden");
     renderAdminRooms();
-  } else {
-    alert("שם משתמש או סיסמה שגויים");
-  }
+  } else alert("שם משתמש או סיסמה שגויים");
 }
 function adminLogout(){
   document.getElementById("adminLogin").classList.remove("hidden");
@@ -425,23 +472,15 @@ function renderAdminRooms(){
   const arr = rooms();
   const rows = arr.map((r,i)=>`<tr class="${r.active===false?'inactive':''}">
     <td><input value="${r.name}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
-    <td>
-      <select onchange="updateRoomField(${i}, 'type', this.value)">
-        <option value="single" ${r.type==="single"?"selected":""}>יחיד</option>
-        <option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option>
-      </select>
-    </td>
+    <td><select onchange="updateRoomField(${i}, 'type', this.value)"><option value="single" ${r.type==="single"?"selected":""}>יחיד</option><option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option></select></td>
     <td><input type="number" min="1" value="${r.stations}" onchange="updateRoomField(${i}, 'stations', this.value)"></td>
     <td><input value="${r.password || ""}" onchange="updateRoomField(${i}, 'password', this.value)"></td>
     <td class="toggle"><input type="checkbox" ${r.active!==false?"checked":""} onchange="updateRoomField(${i}, 'active', this.checked)"> פעיל</td>
-    <td><button class="danger" onclick="deleteRoom(${i})">מחיקה</button></td>
+    <td><button class="danger" type="button" onclick="deleteRoom(${i})">מחיקה</button></td>
   </tr>`).join("");
-  box.innerHTML = `<table>
-    <tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>
-    ${rows}
-  </table>`;
+  box.innerHTML = `<table><tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>${rows}</table>`;
 }
-function updateRoomField(index, field, value){
+async function updateRoomField(index, field, value){
   const arr = rooms();
   if(field === "stations") value = Math.max(1, Number(value || 1));
   if(field === "name"){
@@ -450,11 +489,12 @@ function updateRoomField(index, field, value){
     arr[index].id = value.replace(/\s/g,"");
   }
   arr[index][field] = value;
-  saveRooms(arr);
+  saveLocalRooms(arr);
   renderRooms();
-  if(!document.getElementById("adminRoomsBox").innerHTML.includes("table")) renderAdminRooms();
+  renderAdminRooms();
+  try{ await saveRoomToRemote(arr[index]); syncMsg("פרטי החדר נשמרו ב־Google Sheets."); }catch(e){ syncMsg("פרטי החדר נשמרו מקומית בלבד: " + e.message); }
 }
-function addRoom(){
+async function addRoom(){
   const name = document.getElementById("newRoomName").value.trim();
   const type = document.getElementById("newRoomType").value;
   const stations = Math.max(1, Number(document.getElementById("newRoomStations").value || 1));
@@ -464,32 +504,29 @@ function addRoom(){
   const arr = rooms();
   const id = name.replace(/\s/g,"");
   if(arr.some(r => r.id === id)) return alert("חדר בשם זה כבר קיים");
-  arr.push({id, name, type, stations, password, active});
-  saveRooms(arr);
+  const room = {id, name, type, stations, password, active};
+  arr.push(room); saveLocalRooms(arr);
+  try{ await saveRoomToRemote(room); syncMsg("החדר נוסף ל־Google Sheets."); }catch(e){ syncMsg("החדר נוסף מקומית בלבד: " + e.message); }
   document.getElementById("newRoomName").value = "";
   document.getElementById("newRoomPassword").value = "";
   document.getElementById("newRoomStations").value = "1";
-  renderRooms();
-  renderAdminRooms();
-  alert("החדר נוסף בהצלחה");
+  renderRooms(); renderAdminRooms();
 }
-function deleteRoom(index){
+async function deleteRoom(index){
   const arr = rooms();
   const room = arr[index];
   const hasBookings = bookings().some(b => b.roomId === room.id);
   if(hasBookings && !confirm("יש שיבוצים קיימים לחדר זה. מחיקת החדר לא תמחק את השיבוצים הישנים, אך החדר לא יוצע יותר. להמשיך?")) return;
   if(!hasBookings && !confirm("למחוק את החדר מהרשימה?")) return;
-  arr.splice(index,1);
-  saveRooms(arr);
-  renderRooms();
-  renderAdminRooms();
+  arr.splice(index,1); saveLocalRooms(arr);
+  try{ await deleteRoomRemote(room.id); syncMsg("החדר נמחק מ־Google Sheets."); }catch(e){ syncMsg("החדר נמחק מקומית בלבד: " + e.message); }
+  renderRooms(); renderAdminRooms();
 }
-function exportBookings(){
-  document.getElementById("exportBox").value = JSON.stringify({rooms: rooms(), bookings: bookings()}, null, 2);
-}
-function clearBookings(){
+function exportData(){ document.getElementById("exportBox").value = JSON.stringify({rooms: rooms(), bookings: bookings()}, null, 2); }
+async function clearBookings(){
   if(confirm("למחוק את כל השיבוצים?")){
-    saveBookings([]);
+    saveLocalBookings([]);
+    try{ await clearBookingsRemote(); syncMsg("כל השיבוצים נמחקו מ־Google Sheets."); }catch(e){ syncMsg("השיבוצים נמחקו מקומית בלבד: " + e.message); }
     addMsg("כל השיבוצים נמחקו.");
     if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
   }
