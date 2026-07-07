@@ -109,18 +109,6 @@
       </div>
 
       <div class="adminBlock">
-        <h2>חיבור ל־Google Sheets</h2>
-        <p class="small">יש להדביק כאן כתובת Web App של Google Apps Script. לאחר מכן החדרים והשיבוצים יישמרו בגיליון.</p>
-        <label>כתובת Web App</label>
-        <input id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
-        <div class="actions">
-          <button class="primary" type="button" onclick="saveApiUrl()">שמור חיבור</button>
-          <button class="secondary" type="button" onclick="loadRemoteData()">טען נתונים מהגיליון</button>
-        </div>
-        <p id="syncStatus" class="small"></p>
-      </div>
-
-      <div class="adminBlock">
         <h2>ניהול נתונים</h2>
         <p class="small">ייצוא הנתונים משמש לגיבוי. לאחר חיבור ל־Sheets, המקור המרכזי הוא הגיליון.</p>
         <div class="actions">
@@ -142,14 +130,26 @@
 
     <div id="adminLogin" class="loginBox">
       <div class="row">
-        <div><label>שם משתמש</label><input id="adminUser" placeholder="ADMIN"></div>
-        <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="ADMIN135"></div>
+        <div><label>שם משתמש</label><input id="adminUser" placeholder=""></div>
+        <div><label>סיסמה</label><input id="adminPass" type="password" placeholder=""></div>
       </div>
       <div class="actions"><button class="primary" type="button" onclick="adminLogin()">כניסה לניהול</button></div>
-      <p class="small">ברירת מחדל: שם משתמש <code>ADMIN</code>, סיסמה <code>ADMIN135</code>.</p>
+      <p class="small">הכניסה מיועדת למורשים בלבד.</p>
     </div>
 
     <div id="adminPanel" class="hidden">
+      <div class="adminBlock" style="margin-top:0;padding-top:0;border-top:0">
+        <h2>חיבור ל־Google Sheets</h2>
+        <p class="small">אזור זה גלוי למנהלים בלבד. כאן ניתן להגדיר או לעדכן את כתובת ה־Web App.</p>
+        <label>כתובת Web App</label>
+        <input id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="actions">
+          <button class="primary" type="button" onclick="saveApiUrl()">שמור חיבור</button>
+          <button class="secondary" type="button" onclick="loadRemoteData()">טען נתונים מהגיליון</button>
+        </div>
+        <p id="syncStatus" class="small"></p>
+      </div>
+
       <p class="small">כאן ניתן לקבוע אילו חדרים רלוונטיים לשנת הלימודים, לשנות פרטי חדרים קיימים ולהוסיף חדרים חדשים. השינויים יישמרו ב־Google Sheets כאשר מוגדר חיבור.</p>
       <div class="actions">
         <button class="secondary" type="button" onclick="renderAdminRooms()">רענון רשימת חדרים</button>
@@ -199,11 +199,15 @@ let state = { form: {name:"", semester:"", day:"", start:"", end:"", roomNeed:""
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbztKEAxJuahs0sO7S_ELdqR1ThaPfnO5FQjwjFiOetVwQyNzHFkseVWUzhhxxV3yCjxiw/exec";
 function apiUrl(){ return localStorage.getItem("teacherRoomApiUrl") || DEFAULT_API_URL; }
 function saveApiUrl(){
-  const v = document.getElementById("apiUrlInput").value.trim();
+  const input = document.getElementById("apiUrlInput");
+  const v = input ? input.value.trim() : "";
   localStorage.setItem("teacherRoomApiUrl", v);
   syncMsg(v ? "כתובת החיבור נשמרה." : "כתובת החיבור נמחקה.");
 }
-function syncMsg(t){ document.getElementById("syncStatus").textContent = t; }
+function syncMsg(t){
+  const el = document.getElementById("syncStatus");
+  if(el) el.textContent = t;
+}
 
 async function api(action, payload={}){
   const url = apiUrl();
@@ -277,7 +281,8 @@ function setPanel(html){ document.getElementById("panel").innerHTML = html; }
 function userSays(text){ addMsg(text, "user"); }
 
 function init(){
-  document.getElementById("apiUrlInput").value = apiUrl();
+  const apiInput = document.getElementById("apiUrlInput");
+  if(apiInput) apiInput.value = apiUrl();
   renderRooms();
   addMsg("שלום, אני בוט השיבוץ לשעות קבלה. נתחיל בכמה שאלות קצרות כדי למצוא חדר מתאים.");
   askName();
@@ -449,6 +454,8 @@ function hideBookingsTable(){ const box = document.getElementById("bookingsBox")
 /* Admin */
 function openAdmin(){
   document.getElementById("adminModal").classList.remove("hidden");
+  const apiInput = document.getElementById("apiUrlInput");
+  if(apiInput) apiInput.value = apiUrl();
   document.getElementById("adminUser").focus();
 }
 function closeAdmin(){ document.getElementById("adminModal").classList.add("hidden"); }
