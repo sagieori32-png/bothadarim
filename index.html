@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>בוט שיבוץ חדרים – מורים מן החוץ</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --text:#172033; --muted:#6b7280;
+      --primary:#2446a8; --primary2:#eef3ff; --line:#e5e7eb;
+      --ok:#0f766e; --warn:#b45309; --bad:#b91c1c;
+      --shadow:0 18px 45px rgba(18,35,74,.10);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#f7f9ff,#f6f7fb 45%,#fff);font-family:Arial,"Noto Sans Hebrew",sans-serif;color:var(--text)}
+    .wrap{max-width:1040px;margin:0 auto;padding:28px 18px 54px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{width:50px;height:50px;border-radius:16px;background:var(--primary);display:grid;place-items:center;color:white;font-size:26px;box-shadow:var(--shadow)}
+    h1{margin:0;font-size:26px}
+    .sub{margin:4px 0 0;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+    @media(max-width:850px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
+    .card{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .chat{padding:18px;min-height:560px;display:flex;flex-direction:column}
+    .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:12px}
+    .msg{max-width:86%;padding:13px 15px;border-radius:18px;line-height:1.45;font-size:15px;white-space:pre-wrap}
+    .bot{align-self:flex-start;background:#fff;border:1px solid var(--line)}
+    .user{align-self:flex-end;background:var(--primary);color:#fff}
+    .panel{border-top:1px solid var(--line);padding-top:14px}
+    label{display:block;font-weight:700;margin-bottom:7px}
+    input,select{width:100%;border:1px solid #d1d5db;border-radius:14px;padding:12px 13px;font-size:15px;background:white}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{border:0;border-radius:14px;padding:11px 15px;font-weight:700;cursor:pointer;font-size:15px}
+    .primary{background:var(--primary);color:#fff}
+    .secondary{background:var(--primary2);color:var(--primary)}
+    .ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
+    .danger{background:#fee2e2;color:var(--bad)}
+    .opt{border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0;background:#fff}
+    .opt h3{margin:0 0 6px;font-size:17px}
+    .pill{display:inline-block;background:#f3f4f6;border-radius:999px;padding:5px 9px;margin:4px 0 0 5px;font-size:13px;color:#374151}
+    .side{padding:18px}
+    .side h2{font-size:18px;margin:0 0 12px}
+    table{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:14px}
+    th,td{border-bottom:1px solid var(--line);padding:9px;text-align:right}
+    th{background:#f8fafc;color:#374151}
+    .small{font-size:13px;color:var(--muted);line-height:1.5}
+    .status{margin-top:12px;padding:12px;border-radius:16px;background:#f8fafc;border:1px solid var(--line)}
+    .ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
+    .hidden{display:none}
+    .admin{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+    textarea{width:100%;height:110px;border:1px solid #d1d5db;border-radius:14px;padding:10px;font-size:13px;direction:ltr}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">🏫</div>
+      <div>
+        <h1>בוט שיבוץ חדרים לשעות קבלה</h1>
+        <p class="sub">שיבוץ עצמי למורים מן החוץ לפי סמסטר, יום, שעה והעדפת חדר</p>
+      </div>
+    </div>
+    <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
+  </header>
+
+  <div class="grid">
+    <section class="card chat">
+      <div class="messages" id="messages"></div>
+      <div class="panel" id="panel"></div>
+    </section>
+
+    <aside class="card side">
+      <h2>מצאי חדרים</h2>
+      <table id="roomsTable"></table>
+      <div class="status">
+        <div><span class="ok">●</span> חדר יחיד = מתאים למורה אחד/ת בלבד</div>
+        <div><span class="warn">●</span> חדר עם כמה עמדות = מאפשר שיבוץ מקביל</div>
+      </div>
+
+      <div class="admin">
+        <h2>ניהול נתונים</h2>
+        <p class="small">השיבוצים נשמרים בדפדפן המקומי. לחיבור מלא ל־Google Sheets יש להחליף את פונקציות השמירה/טעינה בקריאת Apps Script.</p>
+        <div class="actions">
+          <button class="secondary" onclick="exportBookings()">ייצוא שיבוצים JSON</button>
+          <button class="danger" onclick="clearBookings()">מחיקת כל השיבוצים</button>
+        </div>
+        <textarea id="exportBox" placeholder="כאן יופיע ייצוא הנתונים"></textarea>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const ROOMS = [
+  {id:"409א", name:"409 א׳", type:"shared", stations:2, password:"123654 מפתח"},
+  {id:"213", name:"213", type:"single", stations:1, password:"213312 מפתח"},
+  {id:"210", name:"210", type:"single", stations:1, password:"210012 מפתח"},
+  {id:"212", name:"212", type:"single", stations:1, password:"212121 מפתח"},
+  {id:"406", name:"406", type:"shared", stations:2, password:"321456 מפתח"},
+  {id:"513", name:"513", type:"shared", stations:2, password:"1235"},
+  {id:"535", name:"535", type:"single", stations:1, password:"535365 מפתח"},
+  {id:"509א", name:"509 א׳", type:"single", stations:1, password:"509#"}
+];
+
+const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי"];
+const SEMESTERS = ["א׳","ב׳","שנתי"];
+const HOURS = [];
+for(let h=8; h<=18; h++){
+  HOURS.push(String(h).padStart(2,"0")+":00");
+  if(h<18) HOURS.push(String(h).padStart(2,"0")+":30");
+}
+
+let state = {
+  step: "name",
+  form: {name:"", semester:"", day:"", start:"", end:"", roomNeed:""},
+  options: []
+};
+
+function bookings(){
+  return JSON.parse(localStorage.getItem("teacherRoomBookings") || "[]");
+}
+function saveBookings(arr){
+  localStorage.setItem("teacherRoomBookings", JSON.stringify(arr));
+}
+function addMsg(text, who="bot"){
+  const el = document.createElement("div");
+  el.className = "msg " + who;
+  el.textContent = text;
+  document.getElementById("messages").appendChild(el);
+  el.scrollIntoView({behavior:"smooth", block:"end"});
+}
+function setPanel(html){ document.getElementById("panel").innerHTML = html; }
+function userSays(text){ addMsg(text, "user"); }
+
+function init(){
+  renderRooms();
+  addMsg("שלום, אני בוט השיבוץ לשעות קבלה. נתחיל בכמה שאלות קצרות כדי למצוא חדר מתאים.");
+  askName();
+}
+function resetBot(){
+  state = {step:"name", form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("exportBox").value = "";
+  init();
+}
+function renderRooms(){
+  const rows = ROOMS.map(r => `<tr><td>${r.name}</td><td>${r.type==="single"?"יחיד":"כמה עמדות"}</td><td>${r.stations}</td></tr>`).join("");
+  document.getElementById("roomsTable").innerHTML = `<tr><th>חדר</th><th>סוג</th><th>עמדות</th></tr>${rows}`;
+}
+
+function askName(){
+  setPanel(`<label>שם מלא</label><input id="name" placeholder="לדוגמה: ד״ר ישראל ישראלי" autofocus>
+  <div class="actions"><button class="primary" onclick="saveName()">המשך</button></div>`);
+}
+function saveName(){
+  const v = document.getElementById("name").value.trim();
+  if(!v) return alert("נא להזין שם מלא");
+  state.form.name = v; userSays(v); askSemester();
+}
+function askSemester(){
+  addMsg("באיזה סמסטר מתקיימת שעת הקבלה?");
+  setPanel(`<label>סמסטר</label><select id="semester">${SEMESTERS.map(s=>`<option>${s}</option>`).join("")}</select>
+  <div class="actions"><button class="primary" onclick="saveSemester()">המשך</button></div>`);
+}
+function saveSemester(){
+  const v = document.getElementById("semester").value;
+  state.form.semester = v; userSays(v); askDay();
+}
+function askDay(){
+  addMsg("באיזה יום בשבוע?");
+  setPanel(`<label>יום</label><select id="day">${DAYS.map(d=>`<option>${d}</option>`).join("")}</select>
+  <div class="actions"><button class="primary" onclick="saveDay()">המשך</button></div>`);
+}
+function saveDay(){
+  const v = document.getElementById("day").value;
+  state.form.day = v; userSays(v); askHours();
+}
+function askHours(){
+  addMsg("באילו שעות נדרשת שעת הקבלה?");
+  setPanel(`<div class="row">
+    <div><label>שעת התחלה</label><select id="start">${HOURS.map(h=>`<option>${h}</option>`).join("")}</select></div>
+    <div><label>שעת סיום</label><select id="end">${HOURS.map(h=>`<option>${h}</option>`).join("")}</select></div>
+  </div>
+  <div class="actions"><button class="primary" onclick="saveHours()">המשך</button></div>`);
+}
+function saveHours(){
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
+  if(timeToMin(end) <= timeToMin(start)) return alert("שעת הסיום חייבת להיות אחרי שעת ההתחלה");
+  state.form.start=start; state.form.end=end; userSays(`${start}–${end}`); askRoomNeed();
+}
+function askRoomNeed(){
+  addMsg("האם נדרש חדר יחיד, או שאפשר חדר עם כמה עמדות?");
+  setPanel(`<label>העדפת חדר</label><select id="roomNeed">
+    <option value="single">צריך/ה חדר יחיד</option>
+    <option value="shared">אפשר חדר עם כמה עמדות</option>
+    <option value="any">אין העדפה</option>
+  </select>
+  <div class="actions"><button class="primary" onclick="findOptions()">מצא חדרים פנויים</button></div>`);
+}
+function timeToMin(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+function overlap(aStart,aEnd,bStart,bEnd){
+  return timeToMin(aStart) < timeToMin(bEnd) && timeToMin(bStart) < timeToMin(aEnd);
+}
+function roomCapacityUsed(roomId, f){
+  return bookings().filter(b =>
+    b.semester===f.semester && b.day===f.day && b.roomId===roomId &&
+    overlap(b.start,b.end,f.start,f.end)
+  ).length;
+}
+function roomAllowed(room, need){
+  if(need==="single") return room.type==="single";
+  if(need==="shared") return room.type==="shared" || room.type==="single";
+  return true;
+}
+function findOptions(){
+  const need = document.getElementById("roomNeed").value;
+  state.form.roomNeed = need;
+  userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
+  const options = ROOMS
+    .filter(r => roomAllowed(r, need))
+    .map(r => ({room:r, used:roomCapacityUsed(r.id, state.form)}))
+    .filter(x => x.used < x.room.stations)
+    .sort((a,b)=> (a.room.type==="single" ? 0 : 1) - (b.room.type==="single" ? 0 : 1));
+  state.options = options;
+  if(!options.length){
+    addMsg("לא נמצאו חדרים פנויים לפי הבחירה. אפשר לשנות יום/שעה/סוג חדר ולבדוק שוב.");
+    setPanel(`<div class="actions">
+      <button class="secondary" onclick="askDay()">שינוי יום</button>
+      <button class="secondary" onclick="askHours()">שינוי שעות</button>
+      <button class="secondary" onclick="askRoomNeed()">שינוי סוג חדר</button>
+      <button class="ghost" onclick="resetBot()">התחלה מחדש</button>
+    </div>`);
+    return;
+  }
+  addMsg(`נמצאו ${options.length} אפשרויות פנויות. בחר/י חדר לשיבוץ:`);
+  renderOptions();
+}
+function renderOptions(){
+  const html = state.options.map((x,i)=>`
+    <div class="opt">
+      <h3>חדר ${x.room.name}</h3>
+      <span class="pill">${x.room.type==="single"?"חדר יחיד":"כמה עמדות"}</span>
+      <span class="pill">${x.room.stations-x.used} עמדות פנויות</span>
+      <span class="pill">${state.form.day}, ${state.form.start}–${state.form.end}</span>
+      <div class="actions"><button class="primary" onclick="book(${i})">בחר/י ושבץ/י</button></div>
+    </div>`).join("");
+  setPanel(html + `<div class="actions"><button class="ghost" onclick="askRoomNeed()">בדיקה אחרת</button></div>`);
+}
+function book(i){
+  const chosen = state.options[i].room;
+  const record = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    createdAt: new Date().toISOString(),
+    teacherName: state.form.name,
+    semester: state.form.semester,
+    day: state.form.day,
+    start: state.form.start,
+    end: state.form.end,
+    roomId: chosen.id,
+    roomName: chosen.name
+  };
+  const arr = bookings(); arr.push(record); saveBookings(arr);
+  userSays(`בחרתי חדר ${chosen.name}`);
+  addMsg(`השיבוץ בוצע בהצלחה.
+
+שם: ${record.teacherName}
+סמסטר: ${record.semester}
+יום ושעה: ${record.day}, ${record.start}–${record.end}
+חדר: ${chosen.name}
+מידע כניסה: ${chosen.password}`);
+  setPanel(`<div class="actions">
+    <button class="primary" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
+    <button class="secondary" onclick="startChange()">שינוי שיבוץ קיים</button>
+  </div>`);
+}
+function startChange(){
+  addMsg("כדי לשנות שיבוץ קיים, הזן/י שם מלא ואציג שיבוצים קיימים למחיקה או שיבוץ מחדש.");
+  setPanel(`<label>שם מלא לחיפוש</label><input id="findName" placeholder="שם מלא">
+  <div class="actions"><button class="primary" onclick="findExisting()">חיפוש שיבוצים</button></div>`);
+}
+function findExisting(){
+  const name = document.getElementById("findName").value.trim();
+  const arr = bookings().filter(b => b.teacherName.includes(name));
+  if(!arr.length){ addMsg("לא נמצאו שיבוצים בשם זה."); return; }
+  const html = arr.map(b=>`<div class="opt">
+    <h3>${b.teacherName}</h3>
+    <span class="pill">חדר ${b.roomName}</span><span class="pill">${b.semester}</span><span class="pill">${b.day}, ${b.start}–${b.end}</span>
+    <div class="actions"><button class="danger" onclick="deleteBooking('${b.id}')">מחק/י שיבוץ זה</button></div>
+  </div>`).join("");
+  setPanel(html + `<div class="actions"><button class="primary" onclick="resetBot()">בצע/י שיבוץ חדש</button></div>`);
+}
+function deleteBooking(id){
+  saveBookings(bookings().filter(b=>b.id!==id));
+  addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
+  setPanel(`<div class="actions"><button class="primary" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" onclick="startChange()">חיפוש נוסף</button></div>`);
+}
+function exportBookings(){
+  document.getElementById("exportBox").value = JSON.stringify(bookings(), null, 2);
+}
+function clearBookings(){
+  if(confirm("למחוק את כל השיבוצים?")){ saveBookings([]); addMsg("כל השיבוצים נמחקו."); }
+}
+init();
+</script>
+</body>
+</html>
