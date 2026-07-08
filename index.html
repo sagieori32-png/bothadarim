@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>בוט שיבוץ חדרים – מורים מן החוץ</title>
+  <title>מערכת לשיבוץ חדר לשעת קבלה</title>
   <style>
     :root{
       --bg:#f6f7fb; --card:#fff; --text:#172033; --muted:#6b7280;
@@ -17,18 +17,19 @@
     .wrap{max-width:1120px;margin:0 auto;padding:28px 18px 54px}
     header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
     .brand{display:flex;align-items:center;gap:14px}
-    .logo{width:50px;height:50px;border-radius:16px;background:var(--primary);display:grid;place-items:center;color:white;font-size:26px;box-shadow:var(--shadow)}
-    h1{margin:0;font-size:26px}
-    .sub{margin:4px 0 0;color:var(--muted);font-size:14px}
-    .grid{display:grid;grid-template-columns:1.12fr .88fr;gap:18px}
+    .logo{width:58px;height:58px;border-radius:18px;background:linear-gradient(145deg,#172554,#3154c9);display:grid;place-items:center;color:white;font-size:15px;font-weight:900;letter-spacing:.5px;box-shadow:var(--shadow)}
+    .schoolTitle{font-size:15px;font-weight:800;color:#3154c9;margin-bottom:3px}
+    h1{margin:0;font-size:30px;letter-spacing:-.3px}
+    .sub{margin:6px 0 0;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:20px}
     @media(max-width:900px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
     .card{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .chat{padding:18px;min-height:560px;display:flex;flex-direction:column}
-    .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:12px}
-    .msg{max-width:86%;padding:13px 15px;border-radius:18px;line-height:1.45;font-size:15px;white-space:pre-wrap}
-    .bot{align-self:flex-start;background:#fff;border:1px solid var(--line)}
-    .user{align-self:flex-end;background:var(--primary);color:#fff}
-    .panel{border-top:1px solid var(--line);padding-top:14px}
+    .chat{padding:22px;min-height:560px;display:flex;flex-direction:column;background:linear-gradient(180deg,#ffffff,#fbfcff)}
+    .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:14px}
+    .msg{max-width:92%;padding:14px 16px;border-radius:16px;line-height:1.55;font-size:15px;white-space:pre-wrap}
+    .bot{align-self:stretch;background:#f8fafc;border:1px solid var(--line);border-right:5px solid #3154c9}
+    .user{align-self:flex-end;background:#172554;color:#fff;max-width:70%}
+    .panel{border-top:1px solid var(--line);padding-top:16px;background:#fff}
     label{display:block;font-weight:700;margin-bottom:7px}
     input,select{width:100%;border:1px solid #d1d5db;border-radius:14px;padding:12px 13px;font-size:15px;background:white}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -76,9 +77,10 @@
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="logo">🏫</div>
+      <div class="logo">HUJI</div>
       <div>
-        <h1>בוט שיבוץ חדרים לשעות קבלה</h1>
+        <div class="schoolTitle">ביה"ס לעבודה סוציאלית ולרווחה חברתית</div>
+        <h1>מערכת לשיבוץ חדר לשעת קבלה</h1>
         <p class="sub">שיבוץ עצמי למורים מן החוץ לפי סמסטר, יום, שעה והעדפת חדר</p>
       </div>
     </div>
@@ -104,9 +106,9 @@
 
       <div class="adminBlock">
         <h2>שיבוצים קיימים במערכת</h2>
-        <p class="small">הטבלה נטענת מ־Google Sheets אם הוגדר חיבור; אחרת מהדפדפן המקומי.</p>
+        <p class="small">הטבלה מתעדכנת מהגיליון בכל לחיצה על רענון. Google Sheets הוא מקור הנתונים המרכזי.</p>
         <div class="actions">
-          <button class="secondary" type="button" onclick="refreshBookingsTable()">הצג / רענן טבלת שיבוצים</button>
+          <button class="secondary" type="button" onclick="forceRemoteRefresh()">הצג / רענן טבלת שיבוצים</button>
           <button class="ghost" type="button" onclick="hideBookingsTable()">הסתר טבלה</button>
         </div>
         <div id="bookingsBox" class="bookingsBox hidden"></div>
@@ -218,15 +220,23 @@ function syncMsg(t){
 async function api(action, payload={}){
   const url = apiUrl();
   if(!url) throw new Error("לא הוגדרה כתובת Web App");
-  const res = await fetch(url, {
-    method:"POST",
-    mode:"cors",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({action, ...payload})
-  });
-  const data = await res.json();
-  if(!data.ok) throw new Error(data.error || "שגיאה לא ידועה");
-  return data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try{
+    const res = await fetch(url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now(), {
+      method:"POST",
+      mode:"cors",
+      cache:"no-store",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action, ...payload}),
+      signal: controller.signal
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || "שגיאה לא ידועה");
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function localRooms(){
@@ -243,17 +253,23 @@ function saveLocalBookings(arr){ localStorage.setItem("teacherRoomBookings", JSO
 
 async function loadRemoteData(){
   try{
-    syncMsg("טוען נתונים מהגיליון...");
+    syncMsg("טוען נתונים עדכניים מהגיליון...");
     const data = await api("getData");
     saveLocalRooms(data.rooms && data.rooms.length ? data.rooms : DEFAULT_ROOMS);
     saveLocalBookings((data.bookings || []).map(b => ({...b, syncStatus:"synced"})));
     renderRooms();
     if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
     if(!document.getElementById("adminPanel").classList.contains("hidden")) renderAdminRooms();
-    syncMsg("הנתונים נטענו בהצלחה מ־Google Sheets.");
+    syncMsg("הנתונים עודכנו מ־Google Sheets.");
+    return true;
   }catch(e){
-    syncMsg("לא ניתן לטעון מהגיליון: " + e.message);
+    syncMsg("לא ניתן לטעון מהגיליון. מוצגים נתונים מקומיים זמניים: " + e.message);
+    return false;
   }
+}
+async function forceRemoteRefresh(){
+  if(apiUrl()) await loadRemoteData();
+  renderBookingsTable();
 }
 async function saveRoomToRemote(room){
   if(!apiUrl()) return;
@@ -305,7 +321,7 @@ function init(){
   const apiInput = document.getElementById("apiUrlInput");
   if(apiInput) apiInput.value = apiUrl();
   renderRooms();
-  addMsg("שלום, אני בוט השיבוץ לשעות קבלה. נתחיל בכמה שאלות קצרות כדי למצוא חדר מתאים.");
+  addMsg("ברוכים הבאים למערכת השיבוץ. נתחיל בכמה פרטים קצרים כדי לאתר חדר פנוי ומתאים לשעת הקבלה.");
   askName();
   if(!initialRemoteLoadDone && apiUrl()){
     initialRemoteLoadDone = true;
@@ -380,7 +396,8 @@ function roomAllowed(room, need){
   return true;
 }
 async function findOptions(){
-  // בדיקת הזמינות מתבצעת מול הנתונים שכבר נטענו למערכת, כדי למנוע עיכוב בשיבוץ.
+  // לפני הצעת חדרים טוענים מצב עדכני מהגיליון כדי למנוע שיבוץ לפי נתונים ישנים.
+  if(apiUrl()) await loadRemoteData();
   const need = document.getElementById("roomNeed").value;
   state.form.roomNeed = need;
   userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
@@ -446,11 +463,11 @@ async function book(i){
   if(apiUrl()){
     syncMsg("השיבוץ מוצג במערכת ונשמר כעת ב־Google Sheets...");
     saveBookingToRemote(record)
-      .then(() => {
+      .then(async () => {
         const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"synced"} : b);
         saveLocalBookings(updated);
         syncMsg("השיבוץ נשמר ב־Google Sheets.");
-        if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+        if(!document.getElementById('bookingsBox').classList.contains('hidden')) await loadRemoteData();
       })
       .catch(e => {
         const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"error"} : b);
@@ -477,8 +494,16 @@ function findExisting(){
   setPanel(html + `<div class="actions"><button class="primary" type="button" onclick="resetBot()">בצע/י שיבוץ חדש</button></div>`);
 }
 async function deleteBooking(id){
-  saveLocalBookings(bookings().filter(b=>b.id!==id));
-  try{ await deleteBookingRemote(id); syncMsg("השיבוץ נמחק מ־Google Sheets."); }catch(e){ syncMsg("השיבוץ נמחק מקומית בלבד: " + e.message); }
+  try{
+    if(apiUrl()) await deleteBookingRemote(id);
+    saveLocalBookings(bookings().filter(b=>b.id!==id));
+    syncMsg(apiUrl() ? "השיבוץ נמחק מ־Google Sheets." : "השיבוץ נמחק.");
+    if(apiUrl()) await loadRemoteData();
+  }catch(e){
+    syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message);
+    alert("לא ניתן היה למחוק את השיבוץ מ־Google Sheets. נסה/י שוב.");
+    return;
+  }
   if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
   setPanel(`<div class="actions"><button class="primary" type="button" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" type="button" onclick="startChange()">חיפוש נוסף</button></div>`);
@@ -498,10 +523,7 @@ function renderBookingsTable(){
   box.innerHTML = `<table><tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th><th>סטטוס</th></tr>${rows}</table>`;
 }
 async function refreshBookingsTable(){
-  renderBookingsTable();
-  if(apiUrl()){
-    loadRemoteData().then(() => renderBookingsTable());
-  }
+  await forceRemoteRefresh();
 }
 function hideBookingsTable(){ const box = document.getElementById("bookingsBox"); box.classList.add("hidden"); box.innerHTML = ""; }
 
@@ -589,10 +611,17 @@ function exportData(){
 }
 async function clearBookings(){
   if(confirm("למחוק את כל השיבוצים?")){
-    saveLocalBookings([]);
-    try{ await clearBookingsRemote(); syncMsg("כל השיבוצים נמחקו מ־Google Sheets."); }catch(e){ syncMsg("השיבוצים נמחקו מקומית בלבד: " + e.message); }
-    addMsg("כל השיבוצים נמחקו.");
-    if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
+    try{
+      if(apiUrl()) await clearBookingsRemote();
+      saveLocalBookings([]);
+      syncMsg(apiUrl() ? "כל השיבוצים נמחקו מ־Google Sheets." : "כל השיבוצים נמחקו.");
+      if(apiUrl()) await loadRemoteData();
+      addMsg("כל השיבוצים נמחקו.");
+      if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
+    }catch(e){
+      syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message);
+      alert("לא ניתן היה למחוק את השיבוצים מ־Google Sheets. נסה/י שוב.");
+    }
   }
 }
 init();
