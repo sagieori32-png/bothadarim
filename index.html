@@ -61,6 +61,10 @@
     .toggle input{width:auto}
     .loginBox{padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}
     .inactive{opacity:.55}
+    .successCard{border:2px solid #0f766e;background:#ecfdf5;color:#064e3b;border-radius:20px;padding:18px;margin:8px 0;font-size:17px;font-weight:700;line-height:1.6;box-shadow:0 16px 35px rgba(15,118,110,.18)}
+    .successCard .title{font-size:21px;margin-bottom:8px;color:#065f46}
+    .successCard .entry{font-weight:700}
+
     .modalOverlay{position:fixed;inset:0;background:rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center;padding:18px;z-index:9999}
     .modal{background:#fff;border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.22);width:min(980px,100%);max-height:90vh;overflow:auto;padding:20px;border:1px solid var(--line)}
     .modalHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
@@ -108,15 +112,7 @@
         <div id="bookingsBox" class="bookingsBox hidden"></div>
       </div>
 
-      <div class="adminBlock">
-        <h2>ניהול נתונים</h2>
-        <p class="small">ייצוא הנתונים משמש לגיבוי. לאחר חיבור ל־Sheets, המקור המרכזי הוא הגיליון.</p>
-        <div class="actions">
-          <button class="secondary" type="button" onclick="exportData()">ייצוא JSON</button>
-          <button class="danger" type="button" onclick="clearBookings()">מחיקת כל השיבוצים</button>
-        </div>
-        <textarea id="exportBox" placeholder="כאן יופיע ייצוא הנתונים"></textarea>
-      </div>
+      
     </aside>
   </div>
 </div>
@@ -169,6 +165,16 @@
           <div><label>פעיל לשיבוץ?</label><select id="newRoomActive"><option value="true">כן</option><option value="false">לא</option></select></div>
         </div>
         <div class="actions"><button class="primary" type="button" onclick="addRoom()">הוסף חדר</button></div>
+      </div>
+
+      <div class="adminBlock">
+        <h2>ניהול נתונים</h2>
+        <p class="small">ייצוא הנתונים משמש לגיבוי. לאחר חיבור ל־Sheets, המקור המרכזי הוא הגיליון.</p>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="exportData()">ייצוא JSON</button>
+          <button class="danger" type="button" onclick="clearBookings()">מחיקת כל השיבוצים</button>
+        </div>
+        <textarea id="exportBox" placeholder="כאן יופיע ייצוא הנתונים"></textarea>
       </div>
     </div>
   </div>
@@ -277,6 +283,20 @@ function addMsg(text, who="bot"){
   document.getElementById("messages").appendChild(el);
   el.scrollIntoView({behavior:"smooth", block:"end"});
 }
+function addSuccessMsg(record, chosen){
+  const el = document.createElement("div");
+  el.className = "successCard";
+  el.innerHTML = `
+    <div class="title">✅ השיבוץ בוצע בהצלחה</div>
+    <div class="entry">שם: ${record.teacherName}</div>
+    <div class="entry">סמסטר: ${record.semester}</div>
+    <div class="entry">יום ושעה: ${record.day}, ${record.start}–${record.end}</div>
+    <div class="entry">חדר: ${chosen.name}</div>
+    <div class="entry">מידע כניסה: ${chosen.password}</div>
+  `;
+  document.getElementById("messages").appendChild(el);
+  el.scrollIntoView({behavior:"smooth", block:"end"});
+}
 function setPanel(html){ document.getElementById("panel").innerHTML = html; }
 function userSays(text){ addMsg(text, "user"); }
 
@@ -291,7 +311,8 @@ function init(){
 function resetBot(){
   state = {form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
   document.getElementById("messages").innerHTML = "";
-  document.getElementById("exportBox").value = "";
+  const exportBox = document.getElementById("exportBox");
+  if(exportBox) exportBox.value = "";
   init();
 }
 function renderRooms(){
@@ -406,13 +427,7 @@ async function book(i){
   try{ await saveBookingToRemote(record); syncMsg("השיבוץ נשמר ב־Google Sheets."); }catch(e){ syncMsg("השיבוץ נשמר מקומית בלבד: " + e.message); }
   if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
   userSays(`בחרתי חדר ${chosen.name}`);
-  addMsg(`השיבוץ בוצע בהצלחה.
-
-שם: ${record.teacherName}
-סמסטר: ${record.semester}
-יום ושעה: ${record.day}, ${record.start}–${record.end}
-חדר: ${chosen.name}
-מידע כניסה: ${chosen.password}`);
+  addSuccessMsg(record, chosen);
   setPanel(`<div class="actions">
     <button class="primary" type="button" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
     <button class="secondary" type="button" onclick="startChange()">שינוי שיבוץ קיים</button>
@@ -529,7 +544,10 @@ async function deleteRoom(index){
   try{ await deleteRoomRemote(room.id); syncMsg("החדר נמחק מ־Google Sheets."); }catch(e){ syncMsg("החדר נמחק מקומית בלבד: " + e.message); }
   renderRooms(); renderAdminRooms();
 }
-function exportData(){ document.getElementById("exportBox").value = JSON.stringify({rooms: rooms(), bookings: bookings()}, null, 2); }
+function exportData(){
+  const box = document.getElementById("exportBox");
+  if(box) box.value = JSON.stringify({rooms: rooms(), bookings: bookings()}, null, 2);
+}
 async function clearBookings(){
   if(confirm("למחוק את כל השיבוצים?")){
     saveLocalBookings([]);
