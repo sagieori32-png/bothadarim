@@ -4,73 +4,172 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>מערכת לשיבוץ חדר לשעת קבלה</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f6f7fb; --card:#fff; --text:#172033; --muted:#6b7280;
-      --primary:#2446a8; --primary2:#eef3ff; --line:#e5e7eb;
-      --ok:#0f766e; --warn:#b45309; --bad:#b91c1c;
-      --shadow:0 18px 45px rgba(18,35,74,.10);
-      --radius:22px;
+      --bg:#f3f4f8;
+      --paper:#fdfdfb;
+      --text:#1b2333;
+      --muted:#69707f;
+      --primary:#1f3a8f;
+      --primary-deep:#15265e;
+      --primary-soft:#e9eefc;
+      --accent:#b0443c;
+      --line:#e3e6ee;
+      --ok:#0e7a5f; --ok-bg:#e7f6f0;
+      --warn:#96620b; --warn-bg:#fdf3e0;
+      --bad:#b32424; --bad-bg:#fdeaea;
+      --shadow:0 14px 40px rgba(21,38,94,.10);
+      --shadow-soft:0 4px 14px rgba(21,38,94,.07);
+      --radius:20px;
+      --font-body:"Heebo","Noto Sans Hebrew",Arial,sans-serif;
+      --font-display:"Frank Ruhl Libre","Heebo",serif;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(135deg,#f7f9ff,#f6f7fb 45%,#fff);font-family:Arial,"Noto Sans Hebrew",sans-serif;color:var(--text)}
-    .wrap{max-width:1120px;margin:0 auto;padding:28px 18px 54px}
-    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
-    .brand{display:flex;align-items:center;gap:14px}
-    .logo{width:58px;height:58px;border-radius:18px;background:linear-gradient(145deg,#172554,#3154c9);display:grid;place-items:center;color:white;font-size:15px;font-weight:900;letter-spacing:.5px;box-shadow:var(--shadow)}
-    .schoolTitle{font-size:15px;font-weight:800;color:#3154c9;margin-bottom:3px}
-    h1{margin:0;font-size:30px;letter-spacing:-.3px}
-    .sub{margin:6px 0 0;color:var(--muted);font-size:14px}
-    .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:20px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr} header{align-items:flex-start;flex-direction:column}}
-    .card{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .chat{padding:22px;min-height:560px;display:flex;flex-direction:column;background:linear-gradient(180deg,#ffffff,#fbfcff)}
-    .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:14px}
-    .msg{max-width:92%;padding:14px 16px;border-radius:16px;line-height:1.55;font-size:15px;white-space:pre-wrap}
-    .bot{align-self:stretch;background:#f8fafc;border:1px solid var(--line);border-right:5px solid #3154c9}
-    .user{align-self:flex-end;background:#172554;color:#fff;max-width:70%}
-    .panel{border-top:1px solid var(--line);padding-top:16px;background:#fff}
-    label{display:block;font-weight:700;margin-bottom:7px}
-    input,select{width:100%;border:1px solid #d1d5db;border-radius:14px;padding:12px 13px;font-size:15px;background:white}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;color:var(--text);font-family:var(--font-body);
+      background:
+        radial-gradient(1100px 500px at 85% -10%, #e7ecfb 0%, transparent 60%),
+        radial-gradient(900px 420px at -10% 15%, #f6efe9 0%, transparent 55%),
+        var(--bg);
+      min-height:100vh;
+    }
+    .wrap{max-width:1140px;margin:0 auto;padding:30px 20px 60px}
+
+    /* ---------- Header ---------- */
+    header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:16px}
+    .logo{
+      width:62px;height:62px;border-radius:16px;flex-shrink:0;
+      background:linear-gradient(150deg,var(--primary-deep),#3457c4);
+      display:grid;place-items:center;color:#fff;font-size:15px;font-weight:800;
+      letter-spacing:.06em;box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,.25);
+    }
+    .schoolTitle{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:4px;letter-spacing:.01em}
+    h1{margin:0;font-family:var(--font-display);font-size:31px;font-weight:900;line-height:1.15;color:var(--primary-deep)}
+    .sub{margin:7px 0 0;color:var(--muted);font-size:14px}
+    .topActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    /* sync chip */
+    .syncChip{
+      display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
+      padding:7px 13px;border-radius:999px;border:1px solid var(--line);
+      background:#fff;color:var(--muted);box-shadow:var(--shadow-soft);
+      max-width:340px;transition:background .25s,color .25s,border-color .25s;
+    }
+    .syncChip .dot{width:8px;height:8px;border-radius:50%;background:#c7ccd8;flex-shrink:0}
+    .syncChip.ok{background:var(--ok-bg);color:var(--ok);border-color:#bfe6d8}
+    .syncChip.ok .dot{background:var(--ok)}
+    .syncChip.busy{background:var(--primary-soft);color:var(--primary);border-color:#ccd8f5}
+    .syncChip.busy .dot{background:var(--primary);animation:pulse 1s infinite}
+    .syncChip.err{background:var(--bad-bg);color:var(--bad);border-color:#f3c6c6}
+    .syncChip.err .dot{background:var(--bad)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    /* ---------- Layout ---------- */
+    .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:22px;align-items:start}
+    @media(max-width:920px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+
+    /* ---------- Chat ---------- */
+    .chat{padding:22px;min-height:580px;display:flex;flex-direction:column}
+    .messages{flex:1;display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:16px;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{width:8px}
+    .messages::-webkit-scrollbar-thumb{background:#d6dae6;border-radius:8px}
+    .msg{
+      max-width:92%;padding:13px 16px;border-radius:16px;line-height:1.6;font-size:15px;
+      white-space:pre-wrap;animation:msgIn .28s ease both;
+    }
+    @keyframes msgIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+    @media(prefers-reduced-motion:reduce){.msg{animation:none}}
+    .bot{align-self:stretch;background:#f7f9fd;border:1px solid var(--line);border-right:4px solid var(--primary);border-radius:14px 4px 14px 14px}
+    .user{align-self:flex-end;background:var(--primary-deep);color:#fff;max-width:72%;border-radius:14px 14px 4px 14px;box-shadow:var(--shadow-soft)}
+
+    .panel{border-top:1px solid var(--line);padding-top:16px}
+    label{display:block;font-weight:700;margin-bottom:7px;font-size:14px}
+    input,select,textarea{
+      width:100%;border:1.5px solid #d4d9e4;border-radius:12px;padding:11px 13px;font-size:15px;
+      background:#fff;font-family:inherit;color:var(--text);transition:border-color .15s,box-shadow .15s;
+    }
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,58,143,.14)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
     @media(max-width:650px){.row,.row3{grid-template-columns:1fr}}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    button{border:0;border-radius:14px;padding:11px 15px;font-weight:700;cursor:pointer;font-size:15px}
-    .primary{background:var(--primary);color:#fff}
-    .secondary{background:var(--primary2);color:var(--primary)}
-    .ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
-    .danger{background:#fee2e2;color:var(--bad)}
-    .opt{border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0;background:#fff}
-    .opt h3{margin:0 0 6px;font-size:17px}
-    .pill{display:inline-block;background:#f3f4f6;border-radius:999px;padding:5px 9px;margin:4px 0 0 5px;font-size:13px;color:#374151}
-    .side{padding:18px}
-    .side h2{font-size:18px;margin:0 0 12px}
-    table{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:14px}
-    th,td{border-bottom:1px solid var(--line);padding:9px;text-align:right;vertical-align:middle}
-    th{background:#f8fafc;color:#374151}
-    .small{font-size:13px;color:var(--muted);line-height:1.5}
-    .status{margin-top:12px;padding:12px;border-radius:16px;background:#f8fafc;border:1px solid var(--line)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+    button{
+      border:0;border-radius:12px;padding:11px 17px;font-weight:700;cursor:pointer;font-size:15px;
+      font-family:inherit;transition:transform .12s,box-shadow .15s,background .15s,opacity .15s;
+    }
+    button:focus-visible{outline:3px solid rgba(31,58,143,.35);outline-offset:2px}
+    button:active{transform:translateY(1px)}
+    button:disabled{opacity:.55;cursor:wait;transform:none}
+    .primary{background:var(--primary);color:#fff;box-shadow:0 6px 16px rgba(31,58,143,.25)}
+    .primary:hover:not(:disabled){background:var(--primary-deep)}
+    .secondary{background:var(--primary-soft);color:var(--primary)}
+    .secondary:hover:not(:disabled){background:#dde6fa}
+    .ghost{background:#fff;border:1.5px solid var(--line);color:var(--text)}
+    .ghost:hover:not(:disabled){border-color:#c3cadb;background:#f8f9fc}
+    .danger{background:var(--bad-bg);color:var(--bad)}
+    .danger:hover:not(:disabled){background:#f9dcdc}
+
+    /* room option cards */
+    .opt{border:1.5px solid var(--line);border-radius:16px;padding:15px 16px;margin:10px 0;background:#fff;transition:border-color .15s,box-shadow .15s}
+    .opt:hover{border-color:#bcc8ea;box-shadow:var(--shadow-soft)}
+    .opt h3{margin:0 0 8px;font-size:17px;font-family:var(--font-display);font-weight:700;color:var(--primary-deep)}
+    .pill{display:inline-block;background:#f1f3f8;border-radius:999px;padding:5px 11px;margin:3px 0 0 6px;font-size:13px;color:#414a5d;font-weight:500}
+    .pill.free{background:var(--ok-bg);color:var(--ok);font-weight:700}
+
+    /* ---------- Side ---------- */
+    .side{padding:20px}
+    .side h2{font-size:17px;margin:0 0 12px;font-family:var(--font-display);font-weight:700;color:var(--primary-deep)}
+    table{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:12px}
+    th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:right;vertical-align:middle}
+    th{background:#f3f5fa;color:#414a5d;font-weight:700;font-size:13px}
+    tbody tr:nth-child(even),table tr:nth-child(even):not(:first-child){background:#fafbfe}
+    tr:last-child td{border-bottom:0}
+    .small{font-size:13px;color:var(--muted);line-height:1.55}
+    .status{margin-top:14px;padding:12px 14px;border-radius:14px;background:#f7f9fd;border:1px solid var(--line);font-size:13.5px;display:grid;gap:5px}
     .ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}.bad{color:var(--bad);font-weight:700}
     .hidden{display:none!important}
-    .adminBlock{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-    .bookingsBox,.adminBox{margin-top:16px;max-height:390px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
-    .emptyState{padding:14px;color:var(--muted);font-size:14px}
-    textarea{width:100%;height:150px;border:1px solid #d1d5db;border-radius:14px;padding:10px;font-size:13px;direction:ltr}
-    .topActions{display:flex;gap:10px;flex-wrap:wrap}
+    .adminBlock{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+    .bookingsBox,.adminBox{margin-top:14px;max-height:400px;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
+    .emptyState{padding:16px;color:var(--muted);font-size:14px}
+    textarea{height:150px;font-size:13px;direction:ltr}
     .toggle{display:flex;align-items:center;gap:7px;white-space:nowrap}
     .toggle input{width:auto}
-    .loginBox{padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}
-    .inactive{opacity:.55}
-    .successCard{border:2px solid #0f766e;background:#ecfdf5;color:#064e3b;border-radius:20px;padding:18px;margin:8px 0;font-size:17px;font-weight:700;line-height:1.6;box-shadow:0 16px 35px rgba(15,118,110,.18)}
-    .successCard .title{font-size:21px;margin-bottom:8px;color:#065f46}
-    .successCard .entry{font-weight:700}
+    .loginBox{padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff}
+    .inactive{opacity:.5}
 
-    .modalOverlay{position:fixed;inset:0;background:rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center;padding:18px;z-index:9999}
-    .modal{background:#fff;border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.22);width:min(980px,100%);max-height:90vh;overflow:auto;padding:20px;border:1px solid var(--line)}
-    .modalHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
-    .modalHeader h2{margin:0}
-    code{direction:ltr;display:inline-block;background:#f3f4f6;padding:2px 6px;border-radius:7px}
+    /* status badges in bookings table */
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+    .badge.synced{background:var(--ok-bg);color:var(--ok)}
+    .badge.pending{background:var(--warn-bg);color:var(--warn)}
+    .badge.error{background:var(--bad-bg);color:var(--bad)}
+    .badge.local{background:#eef0f5;color:var(--muted)}
+    .retryBtn{padding:4px 10px;font-size:12.5px;border-radius:8px;margin-top:4px}
+
+    /* success card */
+    .successCard{
+      border:1.5px solid #9fd8c6;background:linear-gradient(165deg,#effbf5,#e4f6ee);
+      color:#0b4a3a;border-radius:18px;padding:18px 20px;margin:8px 0;
+      font-size:16px;font-weight:600;line-height:1.7;box-shadow:0 14px 32px rgba(14,122,95,.14);
+      animation:msgIn .3s ease both;
+    }
+    .successCard .title{font-size:20px;margin-bottom:10px;color:#0e7a5f;font-family:var(--font-display);font-weight:900}
+    .successCard .entry b{font-weight:800}
+    .successCard .keyInfo{margin-top:10px;padding:9px 13px;background:#fff;border:1px dashed #9fd8c6;border-radius:12px;display:inline-block}
+
+    /* modal */
+    .modalOverlay{position:fixed;inset:0;background:rgba(17,26,51,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:9999}
+    .modal{background:var(--paper);border-radius:22px;box-shadow:0 30px 90px rgba(0,0,0,.28);width:min(980px,100%);max-height:90vh;overflow:auto;padding:22px;border:1px solid var(--line)}
+    .modalHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+    .modalHeader h2{margin:0;font-family:var(--font-display);font-weight:900;color:var(--primary-deep)}
+    code{direction:ltr;display:inline-block;background:#f1f3f8;padding:2px 7px;border-radius:7px;font-size:13px}
   </style>
 </head>
 <body>
@@ -85,6 +184,7 @@
       </div>
     </div>
     <div class="topActions">
+      <span id="syncChip" class="syncChip hidden"><span class="dot"></span><span id="syncChipText"></span></span>
       <button class="ghost" type="button" onclick="resetBot()">התחלה מחדש</button>
       <button class="secondary" type="button" onclick="openAdmin()">מערכת ניהול</button>
     </div>
@@ -100,21 +200,19 @@
       <h2>מצאי חדרים פעילים לשיבוץ</h2>
       <table id="roomsTable"></table>
       <div class="status">
-        <div><span class="ok">●</span> חדר יחיד = מתאים למורה אחד/ת בלבד</div>
-        <div><span class="warn">●</span> חדר עם כמה עמדות = מאפשר שיבוץ מקביל</div>
+        <div><span class="ok">●</span> חדר יחיד — מתאים למורה אחד/ת בלבד</div>
+        <div><span class="warn">●</span> חדר עם כמה עמדות — מאפשר שיבוץ מקביל</div>
       </div>
 
       <div class="adminBlock">
         <h2>שיבוצים קיימים במערכת</h2>
         <p class="small">הטבלה מתעדכנת מהגיליון בכל לחיצה על רענון. Google Sheets הוא מקור הנתונים המרכזי.</p>
         <div class="actions">
-          <button class="secondary" type="button" onclick="forceRemoteRefresh()">הצג / רענן טבלת שיבוצים</button>
+          <button class="secondary" type="button" id="refreshBookingsBtn" onclick="forceRemoteRefresh()">הצג / רענן טבלת שיבוצים</button>
           <button class="ghost" type="button" onclick="hideBookingsTable()">הסתר טבלה</button>
         </div>
         <div id="bookingsBox" class="bookingsBox hidden"></div>
       </div>
-
-      
     </aside>
   </div>
 </div>
@@ -129,7 +227,7 @@
     <div id="adminLogin" class="loginBox">
       <div class="row">
         <div><label>שם משתמש</label><input id="adminUser" placeholder=""></div>
-        <div><label>סיסמה</label><input id="adminPass" type="password" placeholder=""></div>
+        <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="" onkeydown="if(event.key==='Enter')adminLogin()"></div>
       </div>
       <div class="actions"><button class="primary" type="button" onclick="adminLogin()">כניסה לניהול</button></div>
       <p class="small">הכניסה מיועדת למורשים בלבד.</p>
@@ -204,94 +302,198 @@ for(let h=8; h<=18; h++){
 
 let state = { form: {name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options: [] };
 
+/* ---------- safe storage ----------
+   Some environments (sandboxed previews, private browsing with blocked
+   storage) throw QuotaExceededError on any localStorage write. This wrapper
+   falls back to in-memory storage so the app keeps working — Google Sheets
+   remains the real source of truth either way. */
+const store = (function(){
+  const mem = new Map();
+  let usable = false;
+  try{
+    const k = "__storageTest__";
+    localStorage.setItem(k, "1");
+    localStorage.removeItem(k);
+    usable = true;
+  }catch(e){ usable = false; }
+  return {
+    get(key){
+      if(usable){ try{ return localStorage.getItem(key); }catch(e){} }
+      return mem.has(key) ? mem.get(key) : null;
+    },
+    set(key, value){
+      if(usable){ try{ localStorage.setItem(key, value); return; }catch(e){ usable = false; } }
+      mem.set(key, value);
+    }
+  };
+})();
+
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbztKEAxJuahs0sO7S_ELdqR1ThaPfnO5FQjwjFiOetVwQyNzHFkseVWUzhhxxV3yCjxiw/exec";
-function apiUrl(){ return localStorage.getItem("teacherRoomApiUrl") || DEFAULT_API_URL; }
+function apiUrl(){ return store.get("teacherRoomApiUrl") || DEFAULT_API_URL; }
 function saveApiUrl(){
   const input = document.getElementById("apiUrlInput");
   const v = input ? input.value.trim() : "";
-  localStorage.setItem("teacherRoomApiUrl", v);
-  syncMsg(v ? "כתובת החיבור נשמרה." : "כתובת החיבור נמחקה.");
-}
-function syncMsg(t){
-  const el = document.getElementById("syncStatus");
-  if(el) el.textContent = t;
+  store.set("teacherRoomApiUrl", v);
+  syncMsg(v ? "כתובת החיבור נשמרה." : "כתובת החיבור נמחקה.", v ? "ok" : "err");
 }
 
+/* ---------- sync status (admin text + header chip) ---------- */
+function syncMsg(t, mode){ // mode: "busy" | "ok" | "err"
+  const el = document.getElementById("syncStatus");
+  if(el) el.textContent = t;
+  const chip = document.getElementById("syncChip");
+  const chipText = document.getElementById("syncChipText");
+  if(!chip || !chipText) return;
+  chip.classList.remove("hidden","ok","busy","err");
+  if(mode) chip.classList.add(mode);
+  chipText.textContent = t;
+}
+
+/* ---------- escaping (prevents broken HTML / injection from names) ---------- */
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------- data normalization (fixes sync bugs) ----------
+   Google Sheets often returns:
+   - times as full dates ("1899-12-30T08:00:00.000Z" or "Sat Dec 30 1899 08:00:00 GMT+0200")
+   - numbers as strings ("2")
+   - booleans as strings ("TRUE"/"FALSE")
+   Without normalization, overlap checks and the active-room filter silently break. */
+function normTime(t){
+  if(t == null) return "";
+  t = String(t).trim();
+  let m = t.match(/^(\d{1,2}):(\d{2})/);            // "8:30", "08:30", "08:30:00"
+  if(m) return m[1].padStart(2,"0") + ":" + m[2];
+  const d = new Date(t);                             // ISO / date strings from Sheets
+  if(!isNaN(d)) return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  return t;
+}
+function normBool(v){
+  if(typeof v === "boolean") return v;
+  if(v == null || v === "") return true;
+  const s = String(v).trim().toLowerCase();
+  return !(s === "false" || s === "0" || s === "no" || s === "לא");
+}
+function normalizeRoom(r){
+  return {
+    ...r,
+    id: String(r.id ?? r.name ?? "").trim(),
+    name: String(r.name ?? r.id ?? "").trim(),
+    type: r.type === "shared" ? "shared" : "single",
+    stations: Math.max(1, Number(r.stations) || 1),
+    password: String(r.password ?? ""),
+    active: normBool(r.active)
+  };
+}
+function normalizeBooking(b){
+  return {
+    ...b,
+    id: String(b.id ?? ""),
+    teacherName: String(b.teacherName ?? ""),
+    semester: String(b.semester ?? "").trim(),
+    day: String(b.day ?? "").trim(),
+    start: normTime(b.start),
+    end: normTime(b.end),
+    roomId: String(b.roomId ?? "").trim(),
+    roomName: String(b.roomName ?? "").trim()
+  };
+}
+
+/* ---------- API ----------
+   Timeout is implemented with Promise.race rather than AbortSignal:
+   some embedded/preview environments proxy fetch through postMessage,
+   and AbortSignal cannot be cloned there — passing it breaks every request. */
 async function api(action, payload={}){
   const url = apiUrl();
   if(!url) throw new Error("לא הוגדרה כתובת Web App");
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("החיבור לגיליון לא הגיב בזמן (Timeout). בדוק/י חיבור לאינטרנט.")), 15000);
+  });
+  const request = fetch(url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now(), {
+    method:"POST",
+    mode:"cors",
+    cache:"no-store",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action, ...payload})
+  });
   try{
-    const res = await fetch(url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now(), {
-      method:"POST",
-      mode:"cors",
-      cache:"no-store",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action, ...payload}),
-      signal: controller.signal
-    });
-    const data = await res.json();
+    const res = await Promise.race([request, timeout]);
+    if(!res.ok) throw new Error("השרת החזיר שגיאה (" + res.status + ")");
+    let data;
+    try{ data = await res.json(); }
+    catch{ throw new Error("התקבלה תשובה לא תקינה מהגיליון. ודא/י שה־Web App פרוס כ־Anyone."); }
     if(!data.ok) throw new Error(data.error || "שגיאה לא ידועה");
     return data;
-  } finally {
+  }finally{
     clearTimeout(timer);
   }
 }
 
+/* ---------- local storage ---------- */
 function localRooms(){
-  const saved = JSON.parse(localStorage.getItem("teacherRooms") || "null");
-  if(saved && Array.isArray(saved)) return saved;
-  localStorage.setItem("teacherRooms", JSON.stringify(DEFAULT_ROOMS));
-  return DEFAULT_ROOMS;
+  let saved = null;
+  try{ saved = JSON.parse(store.get("teacherRooms") || "null"); }catch(e){}
+  if(saved && Array.isArray(saved) && saved.length) return saved.map(normalizeRoom);
+  return DEFAULT_ROOMS.map(normalizeRoom);
 }
-function saveLocalRooms(arr){ localStorage.setItem("teacherRooms", JSON.stringify(arr)); }
+function saveLocalRooms(arr){ store.set("teacherRooms", JSON.stringify(arr)); }
 function rooms(){ return localRooms(); }
 function activeRooms(){ return rooms().filter(r => r.active !== false); }
-function bookings(){ return JSON.parse(localStorage.getItem("teacherRoomBookings") || "[]"); }
-function saveLocalBookings(arr){ localStorage.setItem("teacherRoomBookings", JSON.stringify(arr)); }
+function bookings(){
+  let saved = [];
+  try{ saved = JSON.parse(store.get("teacherRoomBookings") || "[]"); }catch(e){}
+  return (Array.isArray(saved) ? saved : []).map(normalizeBooking);
+}
+function saveLocalBookings(arr){ store.set("teacherRoomBookings", JSON.stringify(arr)); }
 
+/* ---------- remote sync ----------
+   Fix: instead of overwriting local data, remote data is MERGED with local
+   bookings that are still pending or failed — so a booking that hasn't reached
+   the sheet yet is never dropped from availability checks or from the table. */
 async function loadRemoteData(){
   try{
-    syncMsg("טוען נתונים עדכניים מהגיליון...");
+    syncMsg("טוען נתונים עדכניים מהגיליון...", "busy");
     const data = await api("getData");
-    saveLocalRooms(data.rooms && data.rooms.length ? data.rooms : DEFAULT_ROOMS);
-    saveLocalBookings((data.bookings || []).map(b => ({...b, syncStatus:"synced"})));
+
+    const remoteRooms = (data.rooms || []).map(normalizeRoom).filter(r => r.id);
+    saveLocalRooms(remoteRooms.length ? remoteRooms : DEFAULT_ROOMS.map(normalizeRoom));
+
+    const remote = (data.bookings || []).map(b => ({...normalizeBooking(b), syncStatus:"synced"}));
+    const remoteIds = new Set(remote.map(b => b.id));
+    const localUnsynced = bookings().filter(b =>
+      (b.syncStatus === "pending" || b.syncStatus === "error") && !remoteIds.has(b.id)
+    );
+    saveLocalBookings([...remote, ...localUnsynced]);
+
     renderRooms();
     if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
     if(!document.getElementById("adminPanel").classList.contains("hidden")) renderAdminRooms();
-    syncMsg("הנתונים עודכנו מ־Google Sheets.");
+    syncMsg("מחובר לגיליון — הנתונים מעודכנים.", "ok");
     return true;
   }catch(e){
-    syncMsg("לא ניתן לטעון מהגיליון. מוצגים נתונים מקומיים זמניים: " + e.message);
+    syncMsg("אין חיבור לגיליון. מוצגים נתונים מקומיים: " + e.message, "err");
     return false;
   }
 }
 async function forceRemoteRefresh(){
-  if(apiUrl()) await loadRemoteData();
-  renderBookingsTable();
+  const btn = document.getElementById("refreshBookingsBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "מרענן..."; }
+  try{
+    if(apiUrl()) await loadRemoteData();
+    renderBookingsTable();
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "הצג / רענן טבלת שיבוצים"; }
+  }
 }
-async function saveRoomToRemote(room){
-  if(!apiUrl()) return;
-  await api("upsertRoom", {room});
-}
-async function deleteRoomRemote(roomId){
-  if(!apiUrl()) return;
-  await api("deleteRoom", {roomId});
-}
-async function saveBookingToRemote(booking){
-  if(!apiUrl()) return;
-  await api("addBooking", {booking});
-}
-async function deleteBookingRemote(id){
-  if(!apiUrl()) return;
-  await api("deleteBooking", {id});
-}
-async function clearBookingsRemote(){
-  if(!apiUrl()) return;
-  await api("clearBookings", {});
-}
+async function saveRoomToRemote(room){ if(!apiUrl()) return; await api("upsertRoom", {room}); }
+async function deleteRoomRemote(roomId){ if(!apiUrl()) return; await api("deleteRoom", {roomId}); }
+async function saveBookingToRemote(booking){ if(!apiUrl()) return; await api("addBooking", {booking}); }
+async function deleteBookingRemote(id){ if(!apiUrl()) return; await api("deleteBooking", {id}); }
+async function clearBookingsRemote(){ if(!apiUrl()) return; await api("clearBookings", {}); }
 
+/* ---------- chat UI ---------- */
 function addMsg(text, who="bot"){
   const el = document.createElement("div");
   el.className = "msg " + who;
@@ -303,12 +505,12 @@ function addSuccessMsg(record, chosen){
   const el = document.createElement("div");
   el.className = "successCard";
   el.innerHTML = `
-    <div class="title">✅ השיבוץ בוצע בהצלחה</div>
-    <div class="entry">שם: ${record.teacherName}</div>
-    <div class="entry">סמסטר: ${record.semester}</div>
-    <div class="entry">יום ושעה: ${record.day}, ${record.start}–${record.end}</div>
-    <div class="entry">חדר: ${chosen.name}</div>
-    <div class="entry">מידע כניסה: ${chosen.password}</div>
+    <div class="title">✓ השיבוץ בוצע בהצלחה</div>
+    <div class="entry">שם: <b>${esc(record.teacherName)}</b></div>
+    <div class="entry">סמסטר: <b>${esc(record.semester)}</b></div>
+    <div class="entry">יום ושעה: <b>${esc(record.day)}, ${esc(record.start)}–${esc(record.end)}</b></div>
+    <div class="entry">חדר: <b>${esc(chosen.name)}</b></div>
+    <div class="keyInfo">🔑 מידע כניסה: <b>${esc(chosen.password)}</b></div>
   `;
   document.getElementById("messages").appendChild(el);
   el.scrollIntoView({behavior:"smooth", block:"end"});
@@ -316,17 +518,14 @@ function addSuccessMsg(record, chosen){
 function setPanel(html){ document.getElementById("panel").innerHTML = html; }
 function userSays(text){ addMsg(text, "user"); }
 
-let initialRemoteLoadDone = false;
+/* ---------- flow ---------- */
 function init(){
   const apiInput = document.getElementById("apiUrlInput");
   if(apiInput) apiInput.value = apiUrl();
   renderRooms();
   addMsg("ברוכים הבאים למערכת השיבוץ. נתחיל בכמה פרטים קצרים כדי לאתר חדר פנוי ומתאים לשעת הקבלה.");
   askName();
-  if(!initialRemoteLoadDone && apiUrl()){
-    initialRemoteLoadDone = true;
-    loadRemoteData();
-  }
+  if(apiUrl()) loadRemoteData();
 }
 function resetBot(){
   state = {form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
@@ -337,13 +536,15 @@ function resetBot(){
 }
 function renderRooms(){
   const active = activeRooms();
-  const rows = active.map(r => `<tr><td>${r.name}</td><td>${r.type==="single"?"יחיד":"כמה עמדות"}</td><td>${r.stations}</td></tr>`).join("");
+  const rows = active.map(r => `<tr><td>${esc(r.name)}</td><td>${r.type==="single"?"יחיד":"כמה עמדות"}</td><td>${r.stations}</td></tr>`).join("");
   document.getElementById("roomsTable").innerHTML = `<tr><th>חדר</th><th>סוג</th><th>עמדות</th></tr>${rows || `<tr><td colspan="3">אין חדרים פעילים לשיבוץ</td></tr>`}`;
 }
 
 function askName(){
-  setPanel(`<label>שם מלא</label><input id="name" placeholder="לדוגמה: ד״ר ישראל ישראלי" autofocus>
+  setPanel(`<label>שם מלא</label><input id="name" placeholder="לדוגמה: ד״ר ישראל ישראלי" autofocus onkeydown="if(event.key==='Enter')saveName()">
   <div class="actions"><button class="primary" type="button" onclick="saveName()">המשך</button></div>`);
+  const input = document.getElementById("name");
+  if(input) input.focus();
 }
 function saveName(){
   const v = document.getElementById("name").value.trim();
@@ -383,29 +584,45 @@ function askRoomNeed(){
     <option value="shared">אפשר חדר עם כמה עמדות</option>
     <option value="any">אין העדפה</option>
   </select>
-  <div class="actions"><button class="primary" type="button" onclick="findOptions()">מצא חדרים פנויים</button></div>`);
+  <div class="actions"><button class="primary" type="button" id="findBtn" onclick="findOptions()">מצא חדרים פנויים</button></div>`);
 }
-function timeToMin(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+
+/* ---------- availability ---------- */
+function timeToMin(t){ const [h,m]=String(t).split(":").map(Number); return (h||0)*60+(m||0); }
 function overlap(aStart,aEnd,bStart,bEnd){ return timeToMin(aStart) < timeToMin(bEnd) && timeToMin(bStart) < timeToMin(aEnd); }
+function semesterClash(a, b){
+  // "שנתי" (annual) collides with both semesters
+  return a === b || a === "שנתי" || b === "שנתי";
+}
 function roomCapacityUsed(roomId, f){
-  return bookings().filter(b => b.semester===f.semester && b.day===f.day && b.roomId===roomId && overlap(b.start,b.end,f.start,f.end)).length;
+  return bookings().filter(b =>
+    b.roomId === roomId &&
+    b.day === f.day &&
+    semesterClash(b.semester, f.semester) &&
+    overlap(b.start, b.end, f.start, f.end)
+  ).length;
 }
 function roomAllowed(room, need){
   if(need==="single") return room.type==="single";
   if(need==="shared") return room.type==="shared" || room.type==="single";
   return true;
 }
-async function findOptions(){
-  // לפני הצעת חדרים טוענים מצב עדכני מהגיליון כדי למנוע שיבוץ לפי נתונים ישנים.
-  if(apiUrl()) await loadRemoteData();
-  const need = document.getElementById("roomNeed").value;
-  state.form.roomNeed = need;
-  userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
-  const options = activeRooms()
+function computeOptions(need){
+  return activeRooms()
     .filter(r => roomAllowed(r, need))
     .map(r => ({room:r, used:roomCapacityUsed(r.id, state.form)}))
     .filter(x => x.used < x.room.stations)
     .sort((a,b)=> (a.room.type==="single" ? 0 : 1) - (b.room.type==="single" ? 0 : 1));
+}
+async function findOptions(){
+  const btn = document.getElementById("findBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "בודק זמינות..."; }
+  // Refresh from the sheet first so availability reflects the latest bookings.
+  if(apiUrl()) await loadRemoteData();
+  const need = document.getElementById("roomNeed").value;
+  state.form.roomNeed = need;
+  userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
+  const options = computeOptions(need);
   state.options = options;
   if(!options.length){
     addMsg("לא נמצאו חדרים פנויים לפי הבחירה. אפשר לשנות יום/שעה/סוג חדר ולבדוק שוב.");
@@ -423,73 +640,124 @@ async function findOptions(){
 function renderOptions(){
   const html = state.options.map((x,i)=>`
     <div class="opt">
-      <h3>חדר ${x.room.name}</h3>
+      <h3>חדר ${esc(x.room.name)}</h3>
       <span class="pill">${x.room.type==="single"?"חדר יחיד":"כמה עמדות"}</span>
-      <span class="pill">${x.room.stations-x.used} עמדות פנויות</span>
-      <span class="pill">${state.form.day}, ${state.form.start}–${state.form.end}</span>
-      <div class="actions"><button class="primary" type="button" onclick="book(${i})">בחר/י ושבץ/י</button></div>
+      <span class="pill free">${x.room.stations-x.used} עמדות פנויות</span>
+      <span class="pill">${esc(state.form.day)}, ${esc(state.form.start)}–${esc(state.form.end)}</span>
+      <div class="actions"><button class="primary" type="button" onclick="book(${i}, this)">בחר/י ושבץ/י</button></div>
     </div>`).join("");
   setPanel(html + `<div class="actions"><button class="ghost" type="button" onclick="askRoomNeed()">בדיקה אחרת</button></div>`);
 }
-async function book(i){
-  const chosen = state.options[i].room;
-  const record = {
-    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
-    createdAt: new Date().toISOString(),
-    teacherName: state.form.name,
-    semester: state.form.semester,
-    day: state.form.day,
-    start: state.form.start,
-    end: state.form.end,
-    roomId: chosen.id,
-    roomName: chosen.name,
-    syncStatus: apiUrl() ? "pending" : "local"
-  };
 
-  // עדכון מיידי במסך ובטבלת השיבוצים, בלי לחכות ל-Google Sheets
-  const arr = bookings();
-  arr.push(record);
-  saveLocalBookings(arr);
-  if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+/* ---------- booking ----------
+   Fixes:
+   1. Double-click / double-booking guard.
+   2. Re-checks availability against fresh sheet data right before committing,
+      so two teachers can't grab the same slot based on stale options. */
+let bookingInProgress = false;
+async function book(i, btnEl){
+  if(bookingInProgress) return;
+  bookingInProgress = true;
+  const panelButtons = document.querySelectorAll("#panel button");
+  panelButtons.forEach(b => b.disabled = true);
+  if(btnEl) btnEl.textContent = "משבץ...";
 
-  userSays(`בחרתי חדר ${chosen.name}`);
-  addSuccessMsg(record, chosen);
-  setPanel(`<div class="actions">
-    <button class="primary" type="button" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
-    <button class="secondary" type="button" onclick="startChange()">שינוי שיבוץ קיים</button>
-  </div>`);
+  try{
+    const chosen = state.options[i].room;
 
-  // שמירה ברקע ל-Google Sheets
-  if(apiUrl()){
-    syncMsg("השיבוץ מוצג במערכת ונשמר כעת ב־Google Sheets...");
-    saveBookingToRemote(record)
-      .then(async () => {
-        const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"synced"} : b);
-        saveLocalBookings(updated);
-        syncMsg("השיבוץ נשמר ב־Google Sheets.");
-        if(!document.getElementById('bookingsBox').classList.contains('hidden')) await loadRemoteData();
-      })
-      .catch(e => {
-        const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"error"} : b);
-        saveLocalBookings(updated);
-        syncMsg("השיבוץ מוצג במערכת, אך טרם נשמר ב־Google Sheets: " + e.message);
-        if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
-      });
+    // Final availability check against the latest sheet data
+    if(apiUrl()) await loadRemoteData();
+    const used = roomCapacityUsed(chosen.id, state.form);
+    const freshRoom = rooms().find(r => r.id === chosen.id) || chosen;
+    if(!freshRoom.active || used >= freshRoom.stations){
+      addMsg(`מצטערים — חדר ${chosen.name} נתפס הרגע על ידי מורה אחר/ת. אלו האפשרויות המעודכנות:`);
+      state.options = computeOptions(state.form.roomNeed || "any");
+      if(state.options.length) renderOptions();
+      else setPanel(`<div class="actions">
+        <button class="secondary" type="button" onclick="askDay()">שינוי יום</button>
+        <button class="secondary" type="button" onclick="askHours()">שינוי שעות</button>
+        <button class="ghost" type="button" onclick="resetBot()">התחלה מחדש</button>
+      </div>`);
+      return;
+    }
+
+    const record = {
+      id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2,8),
+      createdAt: new Date().toISOString(),
+      teacherName: state.form.name,
+      semester: state.form.semester,
+      day: state.form.day,
+      start: state.form.start,
+      end: state.form.end,
+      roomId: freshRoom.id,
+      roomName: freshRoom.name,
+      syncStatus: apiUrl() ? "pending" : "local"
+    };
+
+    // Show immediately, save to the sheet in the background
+    const arr = bookings();
+    arr.push(record);
+    saveLocalBookings(arr);
+    if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+
+    userSays(`בחרתי חדר ${freshRoom.name}`);
+    addSuccessMsg(record, freshRoom);
+    setPanel(`<div class="actions">
+      <button class="primary" type="button" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
+      <button class="secondary" type="button" onclick="startChange()">שינוי שיבוץ קיים</button>
+    </div>`);
+
+    if(apiUrl()){
+      syncMsg("השיבוץ מוצג במערכת ונשמר כעת ב־Google Sheets...", "busy");
+      try{
+        await saveBookingToRemote(record);
+        markBookingStatus(record.id, "synced");
+        syncMsg("השיבוץ נשמר ב־Google Sheets.", "ok");
+      }catch(e){
+        markBookingStatus(record.id, "error");
+        syncMsg("השיבוץ מוצג במערכת אך טרם נשמר בגיליון: " + e.message, "err");
+        addMsg("שימו לב: השמירה לגיליון נכשלה. ניתן ללחוץ על 'נסה שוב' בטבלת השיבוצים כדי לשמור שוב.");
+      }
+      if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+    }
+  }finally{
+    bookingInProgress = false;
   }
 }
+function markBookingStatus(id, status){
+  saveLocalBookings(bookings().map(b => b.id === id ? {...b, syncStatus: status} : b));
+}
+async function retrySync(id){
+  const b = bookings().find(x => x.id === id);
+  if(!b) return;
+  syncMsg("מנסה לשמור שוב בגיליון...", "busy");
+  try{
+    await saveBookingToRemote(b);
+    markBookingStatus(id, "synced");
+    syncMsg("השיבוץ נשמר ב־Google Sheets.", "ok");
+  }catch(e){
+    syncMsg("השמירה נכשלה שוב: " + e.message, "err");
+  }
+  renderBookingsTable();
+}
+
+/* ---------- change / delete ---------- */
 function startChange(){
   addMsg("כדי לשנות שיבוץ קיים, הזן/י שם מלא ואציג שיבוצים קיימים למחיקה או שיבוץ מחדש.");
-  setPanel(`<label>שם מלא לחיפוש</label><input id="findName" placeholder="שם מלא">
+  setPanel(`<label>שם מלא לחיפוש</label><input id="findName" placeholder="שם מלא" onkeydown="if(event.key==='Enter')findExisting()">
   <div class="actions"><button class="primary" type="button" onclick="findExisting()">חיפוש שיבוצים</button></div>`);
 }
-function findExisting(){
+async function findExisting(){
   const name = document.getElementById("findName").value.trim();
+  if(!name) return alert("נא להזין שם לחיפוש");
+  // Refresh first so the search also finds bookings made from other devices
+  if(apiUrl()) await loadRemoteData();
   const arr = bookings().filter(b => b.teacherName.includes(name));
   if(!arr.length){ addMsg("לא נמצאו שיבוצים בשם זה."); return; }
   const html = arr.map(b=>`<div class="opt">
-    <h3>${b.teacherName}</h3>
-    <span class="pill">חדר ${b.roomName}</span><span class="pill">${b.semester}</span><span class="pill">${b.day}, ${b.start}–${b.end}</span>
-    <div class="actions"><button class="danger" type="button" onclick="deleteBooking('${b.id}')">מחק/י שיבוץ זה</button></div>
+    <h3>${esc(b.teacherName)}</h3>
+    <span class="pill">חדר ${esc(b.roomName)}</span><span class="pill">${esc(b.semester)}</span><span class="pill">${esc(b.day)}, ${esc(b.start)}–${esc(b.end)}</span>
+    <div class="actions"><button class="danger" type="button" onclick="deleteBooking('${esc(b.id)}')">מחק/י שיבוץ זה</button></div>
   </div>`).join("");
   setPanel(html + `<div class="actions"><button class="primary" type="button" onclick="resetBot()">בצע/י שיבוץ חדש</button></div>`);
 }
@@ -497,10 +765,10 @@ async function deleteBooking(id){
   try{
     if(apiUrl()) await deleteBookingRemote(id);
     saveLocalBookings(bookings().filter(b=>b.id!==id));
-    syncMsg(apiUrl() ? "השיבוץ נמחק מ־Google Sheets." : "השיבוץ נמחק.");
+    syncMsg(apiUrl() ? "השיבוץ נמחק מ־Google Sheets." : "השיבוץ נמחק.", "ok");
     if(apiUrl()) await loadRemoteData();
   }catch(e){
-    syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message);
+    syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message, "err");
     alert("לא ניתן היה למחוק את השיבוץ מ־Google Sheets. נסה/י שוב.");
     return;
   }
@@ -508,26 +776,25 @@ async function deleteBooking(id){
   addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
   setPanel(`<div class="actions"><button class="primary" type="button" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" type="button" onclick="startChange()">חיפוש נוסף</button></div>`);
 }
-function syncLabel(b){
-  if(!apiUrl()) return "מקומי";
-  if(b.syncStatus === "pending") return "נשמר...";
-  if(b.syncStatus === "error") return "שגיאת שמירה";
-  return "נשמר";
+
+/* ---------- bookings table ---------- */
+function syncBadge(b){
+  if(!apiUrl() || b.syncStatus === "local") return `<span class="badge local">מקומי</span>`;
+  if(b.syncStatus === "pending") return `<span class="badge pending">נשמר...</span>`;
+  if(b.syncStatus === "error") return `<span class="badge error">שגיאת שמירה</span><br><button class="secondary retryBtn" type="button" onclick="retrySync('${esc(b.id)}')">נסה שוב</button>`;
+  return `<span class="badge synced">נשמר</span>`;
 }
 function renderBookingsTable(){
   const box = document.getElementById("bookingsBox");
   const arr = bookings().slice().sort((a,b) => (a.semester + a.day + a.roomName + a.start).localeCompare(b.semester + b.day + b.roomName + b.start, "he"));
   box.classList.remove("hidden");
   if(!arr.length){ box.innerHTML = `<div class="emptyState">עדיין אין שיבוצים קיימים במערכת.</div>`; return; }
-  const rows = arr.map(b => `<tr><td>${b.roomName}</td><td>${b.teacherName}</td><td>${b.semester}</td><td>${b.day}</td><td>${b.start}–${b.end}</td><td>${syncLabel(b)}</td></tr>`).join("");
+  const rows = arr.map(b => `<tr><td>${esc(b.roomName)}</td><td>${esc(b.teacherName)}</td><td>${esc(b.semester)}</td><td>${esc(b.day)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${syncBadge(b)}</td></tr>`).join("");
   box.innerHTML = `<table><tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th><th>סטטוס</th></tr>${rows}</table>`;
-}
-async function refreshBookingsTable(){
-  await forceRemoteRefresh();
 }
 function hideBookingsTable(){ const box = document.getElementById("bookingsBox"); box.classList.add("hidden"); box.innerHTML = ""; }
 
-/* Admin */
+/* ---------- Admin ---------- */
 function openAdmin(){
   document.getElementById("adminModal").classList.remove("hidden");
   const apiInput = document.getElementById("apiUrlInput");
@@ -554,10 +821,10 @@ function renderAdminRooms(){
   const box = document.getElementById("adminRoomsBox");
   const arr = rooms();
   const rows = arr.map((r,i)=>`<tr class="${r.active===false?'inactive':''}">
-    <td><input value="${r.name}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
+    <td><input value="${esc(r.name)}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
     <td><select onchange="updateRoomField(${i}, 'type', this.value)"><option value="single" ${r.type==="single"?"selected":""}>יחיד</option><option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option></select></td>
     <td><input type="number" min="1" value="${r.stations}" onchange="updateRoomField(${i}, 'stations', this.value)"></td>
-    <td><input value="${r.password || ""}" onchange="updateRoomField(${i}, 'password', this.value)"></td>
+    <td><input value="${esc(r.password || "")}" onchange="updateRoomField(${i}, 'password', this.value)"></td>
     <td class="toggle"><input type="checkbox" ${r.active!==false?"checked":""} onchange="updateRoomField(${i}, 'active', this.checked)"> פעיל</td>
     <td><button class="danger" type="button" onclick="deleteRoom(${i})">מחיקה</button></td>
   </tr>`).join("");
@@ -575,7 +842,8 @@ async function updateRoomField(index, field, value){
   saveLocalRooms(arr);
   renderRooms();
   renderAdminRooms();
-  try{ await saveRoomToRemote(arr[index]); syncMsg("פרטי החדר נשמרו ב־Google Sheets."); }catch(e){ syncMsg("פרטי החדר נשמרו מקומית בלבד: " + e.message); }
+  try{ await saveRoomToRemote(arr[index]); syncMsg("פרטי החדר נשמרו ב־Google Sheets.", "ok"); }
+  catch(e){ syncMsg("פרטי החדר נשמרו מקומית בלבד: " + e.message, "err"); }
 }
 async function addRoom(){
   const name = document.getElementById("newRoomName").value.trim();
@@ -589,7 +857,8 @@ async function addRoom(){
   if(arr.some(r => r.id === id)) return alert("חדר בשם זה כבר קיים");
   const room = {id, name, type, stations, password, active};
   arr.push(room); saveLocalRooms(arr);
-  try{ await saveRoomToRemote(room); syncMsg("החדר נוסף ל־Google Sheets."); }catch(e){ syncMsg("החדר נוסף מקומית בלבד: " + e.message); }
+  try{ await saveRoomToRemote(room); syncMsg("החדר נוסף ל־Google Sheets.", "ok"); }
+  catch(e){ syncMsg("החדר נוסף מקומית בלבד: " + e.message, "err"); }
   document.getElementById("newRoomName").value = "";
   document.getElementById("newRoomPassword").value = "";
   document.getElementById("newRoomStations").value = "1";
@@ -602,7 +871,8 @@ async function deleteRoom(index){
   if(hasBookings && !confirm("יש שיבוצים קיימים לחדר זה. מחיקת החדר לא תמחק את השיבוצים הישנים, אך החדר לא יוצע יותר. להמשיך?")) return;
   if(!hasBookings && !confirm("למחוק את החדר מהרשימה?")) return;
   arr.splice(index,1); saveLocalRooms(arr);
-  try{ await deleteRoomRemote(room.id); syncMsg("החדר נמחק מ־Google Sheets."); }catch(e){ syncMsg("החדר נמחק מקומית בלבד: " + e.message); }
+  try{ await deleteRoomRemote(room.id); syncMsg("החדר נמחק מ־Google Sheets.", "ok"); }
+  catch(e){ syncMsg("החדר נמחק מקומית בלבד: " + e.message, "err"); }
   renderRooms(); renderAdminRooms();
 }
 function exportData(){
@@ -614,12 +884,12 @@ async function clearBookings(){
     try{
       if(apiUrl()) await clearBookingsRemote();
       saveLocalBookings([]);
-      syncMsg(apiUrl() ? "כל השיבוצים נמחקו מ־Google Sheets." : "כל השיבוצים נמחקו.");
+      syncMsg(apiUrl() ? "כל השיבוצים נמחקו מ־Google Sheets." : "כל השיבוצים נמחקו.", "ok");
       if(apiUrl()) await loadRemoteData();
       addMsg("כל השיבוצים נמחקו.");
       if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
     }catch(e){
-      syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message);
+      syncMsg("לא ניתן היה למחוק מהגיליון. הנתונים לא עודכנו: " + e.message, "err");
       alert("לא ניתן היה למחוק את השיבוצים מ־Google Sheets. נסה/י שוב.");
     }
   }
