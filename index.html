@@ -106,7 +106,7 @@
         <h2>שיבוצים קיימים במערכת</h2>
         <p class="small">הטבלה נטענת מ־Google Sheets אם הוגדר חיבור; אחרת מהדפדפן המקומי.</p>
         <div class="actions">
-          <button class="secondary" type="button" onclick="renderBookingsTable()">הצג / רענן טבלת שיבוצים</button>
+          <button class="secondary" type="button" onclick="refreshBookingsTable()">הצג / רענן טבלת שיבוצים</button>
           <button class="ghost" type="button" onclick="hideBookingsTable()">הסתר טבלה</button>
         </div>
         <div id="bookingsBox" class="bookingsBox hidden"></div>
@@ -246,7 +246,7 @@ async function loadRemoteData(){
     syncMsg("טוען נתונים מהגיליון...");
     const data = await api("getData");
     saveLocalRooms(data.rooms && data.rooms.length ? data.rooms : DEFAULT_ROOMS);
-    saveLocalBookings(data.bookings || []);
+    saveLocalBookings((data.bookings || []).map(b => ({...b, syncStatus:"synced"})));
     renderRooms();
     if(!document.getElementById("bookingsBox").classList.contains("hidden")) renderBookingsTable();
     if(!document.getElementById("adminPanel").classList.contains("hidden")) renderAdminRooms();
@@ -300,13 +300,17 @@ function addSuccessMsg(record, chosen){
 function setPanel(html){ document.getElementById("panel").innerHTML = html; }
 function userSays(text){ addMsg(text, "user"); }
 
+let initialRemoteLoadDone = false;
 function init(){
   const apiInput = document.getElementById("apiUrlInput");
   if(apiInput) apiInput.value = apiUrl();
   renderRooms();
   addMsg("שלום, אני בוט השיבוץ לשעות קבלה. נתחיל בכמה שאלות קצרות כדי למצוא חדר מתאים.");
   askName();
-  loadRemoteData();
+  if(!initialRemoteLoadDone && apiUrl()){
+    initialRemoteLoadDone = true;
+    loadRemoteData();
+  }
 }
 function resetBot(){
   state = {form:{name:"", semester:"", day:"", start:"", end:"", roomNeed:""}, options:[]};
@@ -376,7 +380,7 @@ function roomAllowed(room, need){
   return true;
 }
 async function findOptions(){
-  if(apiUrl()) await loadRemoteData();
+  // בדיקת הזמינות מתבצעת מול הנתונים שכבר נטענו למערכת, כדי למנוע עיכוב בשיבוץ.
   const need = document.getElementById("roomNeed").value;
   state.form.roomNeed = need;
   userSays(need==="single" ? "צריך/ה חדר יחיד" : need==="shared" ? "אפשר חדר עם כמה עמדות" : "אין העדפה");
@@ -421,17 +425,40 @@ async function book(i){
     start: state.form.start,
     end: state.form.end,
     roomId: chosen.id,
-    roomName: chosen.name
+    roomName: chosen.name,
+    syncStatus: apiUrl() ? "pending" : "local"
   };
-  const arr = bookings(); arr.push(record); saveLocalBookings(arr);
-  try{ await saveBookingToRemote(record); syncMsg("השיבוץ נשמר ב־Google Sheets."); }catch(e){ syncMsg("השיבוץ נשמר מקומית בלבד: " + e.message); }
+
+  // עדכון מיידי במסך ובטבלת השיבוצים, בלי לחכות ל-Google Sheets
+  const arr = bookings();
+  arr.push(record);
+  saveLocalBookings(arr);
   if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+
   userSays(`בחרתי חדר ${chosen.name}`);
   addSuccessMsg(record, chosen);
   setPanel(`<div class="actions">
     <button class="primary" type="button" onclick="resetBot()">שיבוץ נוסף / בדיקת זמינות</button>
     <button class="secondary" type="button" onclick="startChange()">שינוי שיבוץ קיים</button>
   </div>`);
+
+  // שמירה ברקע ל-Google Sheets
+  if(apiUrl()){
+    syncMsg("השיבוץ מוצג במערכת ונשמר כעת ב־Google Sheets...");
+    saveBookingToRemote(record)
+      .then(() => {
+        const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"synced"} : b);
+        saveLocalBookings(updated);
+        syncMsg("השיבוץ נשמר ב־Google Sheets.");
+        if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+      })
+      .catch(e => {
+        const updated = bookings().map(b => b.id === record.id ? {...b, syncStatus:"error"} : b);
+        saveLocalBookings(updated);
+        syncMsg("השיבוץ מוצג במערכת, אך טרם נשמר ב־Google Sheets: " + e.message);
+        if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+      });
+  }
 }
 function startChange(){
   addMsg("כדי לשנות שיבוץ קיים, הזן/י שם מלא ואציג שיבוצים קיימים למחיקה או שיבוץ מחדש.");
@@ -456,13 +483,25 @@ async function deleteBooking(id){
   addMsg("השיבוץ נמחק. ניתן לבצע שיבוץ חדש או לבדוק זמינות אחרת.");
   setPanel(`<div class="actions"><button class="primary" type="button" onclick="resetBot()">שיבוץ חדש</button><button class="secondary" type="button" onclick="startChange()">חיפוש נוסף</button></div>`);
 }
+function syncLabel(b){
+  if(!apiUrl()) return "מקומי";
+  if(b.syncStatus === "pending") return "נשמר...";
+  if(b.syncStatus === "error") return "שגיאת שמירה";
+  return "נשמר";
+}
 function renderBookingsTable(){
   const box = document.getElementById("bookingsBox");
   const arr = bookings().slice().sort((a,b) => (a.semester + a.day + a.roomName + a.start).localeCompare(b.semester + b.day + b.roomName + b.start, "he"));
   box.classList.remove("hidden");
   if(!arr.length){ box.innerHTML = `<div class="emptyState">עדיין אין שיבוצים קיימים במערכת.</div>`; return; }
-  const rows = arr.map(b => `<tr><td>${b.roomName}</td><td>${b.teacherName}</td><td>${b.semester}</td><td>${b.day}</td><td>${b.start}–${b.end}</td></tr>`).join("");
-  box.innerHTML = `<table><tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th></tr>${rows}</table>`;
+  const rows = arr.map(b => `<tr><td>${b.roomName}</td><td>${b.teacherName}</td><td>${b.semester}</td><td>${b.day}</td><td>${b.start}–${b.end}</td><td>${syncLabel(b)}</td></tr>`).join("");
+  box.innerHTML = `<table><tr><th>חדר</th><th>מורה</th><th>סמסטר</th><th>יום</th><th>שעות</th><th>סטטוס</th></tr>${rows}</table>`;
+}
+async function refreshBookingsTable(){
+  renderBookingsTable();
+  if(apiUrl()){
+    loadRemoteData().then(() => renderBookingsTable());
+  }
 }
 function hideBookingsTable(){ const box = document.getElementById("bookingsBox"); box.classList.add("hidden"); box.innerHTML = ""; }
 
