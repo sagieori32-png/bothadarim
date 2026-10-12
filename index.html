@@ -229,7 +229,7 @@
         <div><label>שם משתמש</label><input id="adminUser" placeholder=""></div>
         <div><label>סיסמה</label><input id="adminPass" type="password" placeholder="" onkeydown="if(event.key==='Enter')adminLogin()"></div>
       </div>
-      <div class="actions"><button class="primary" type="button" onclick="adminLogin()">כניסה לניהול</button></div>
+      <div class="actions"><button class="primary" type="button" id="adminLoginBtn" onclick="adminLogin()">כניסה לניהול</button></div>
       <p class="small">הכניסה מיועדת למורשים בלבד.</p>
     </div>
 
@@ -411,12 +411,15 @@ async function api(action, payload={}){
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error("החיבור לגיליון לא הגיב בזמן (Timeout). בדוק/י חיבור לאינטרנט.")), 15000);
   });
+  const reqBody = {action, ...payload};
+  const needsAuth = ["upsertRoom","deleteRoom","deleteBooking","clearBookings"];
+  if(needsAuth.includes(action) && reqBody.adminPass === undefined) reqBody.adminPass = ADMIN_PASS;
   const request = fetch(url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now(), {
     method:"POST",
     mode:"cors",
     cache:"no-store",
     headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({action, ...payload})
+    body:JSON.stringify(reqBody)
   });
   try{
     const res = await Promise.race([request, timeout]);
@@ -802,16 +805,25 @@ function openAdmin(){
   document.getElementById("adminUser").focus();
 }
 function closeAdmin(){ document.getElementById("adminModal").classList.add("hidden"); }
-function adminLogin(){
-  const u = document.getElementById("adminUser").value.trim();
+let ADMIN_PASS = "";
+async function adminLogin(){
   const p = document.getElementById("adminPass").value.trim();
-  if(u === "ADMIN" && p === "ADMIN135"){
+  const btn = document.getElementById("adminLoginBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "בודק..."; }
+  try{
+    await api("login", {adminPass: p});        // האימות מתבצע בשרת (Apps Script)
+    ADMIN_PASS = p;                            // נשמר בזיכרון בלבד, לא בקוד
     document.getElementById("adminLogin").classList.add("hidden");
     document.getElementById("adminPanel").classList.remove("hidden");
     renderAdminRooms();
-  } else alert("שם משתמש או סיסמה שגויים");
+  }catch(e){
+    alert("סיסמה שגויה או אין חיבור לגיליון");
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "כניסה לניהול"; }
+  }
 }
 function adminLogout(){
+  ADMIN_PASS = "";
   document.getElementById("adminLogin").classList.remove("hidden");
   document.getElementById("adminPanel").classList.add("hidden");
   document.getElementById("adminUser").value = "";
