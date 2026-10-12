@@ -144,6 +144,9 @@
     .toggle input{width:auto}
     .loginBox{padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff}
     .inactive{opacity:.5}
+    .reassignAlert{margin:0 0 14px;padding:14px 16px;border:1px solid #f0c36d;background:#fff8e6;border-radius:14px;color:#6b4e00}
+    .reassignAlert ul{margin:8px 0 10px;padding-inline-start:20px}
+    .reassignAlert li{margin:3px 0}
 
     /* status badges in bookings table */
     .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
@@ -829,9 +832,19 @@ function adminLogout(){
   document.getElementById("adminUser").value = "";
   document.getElementById("adminPass").value = "";
 }
+let reassignAlerts = [];   // שיבוצים שלא נמצא להם חדר חלופי בעת כיבוי חדר
+function clearReassignAlerts(){ reassignAlerts = []; renderAdminRooms(); }
 function renderAdminRooms(){
   const box = document.getElementById("adminRoomsBox");
   const arr = rooms();
+  let alertHtml = "";
+  if(reassignAlerts.length){
+    alertHtml = `<div class="reassignAlert">
+      <b>⚠ שיבוצים שלא נמצא להם חדר חלופי (${reassignAlerts.length}) — נדרש טיפול ידני:</b>
+      <ul>${reassignAlerts.map(a=>`<li>${esc(a.teacherName)} — ${esc(a.semester)}, ${esc(a.day)} ${esc(a.start)}–${esc(a.end)} (נשאר בחדר ${esc(a.roomName)})</li>`).join("")}</ul>
+      <button class="ghost" type="button" onclick="clearReassignAlerts()">הבנתי, הסתר</button>
+    </div>`;
+  }
   const rows = arr.map((r,i)=>`<tr class="${r.active===false?'inactive':''}">
     <td><input value="${esc(r.name)}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
     <td><select onchange="updateRoomField(${i}, 'type', this.value)"><option value="single" ${r.type==="single"?"selected":""}>יחיד</option><option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option></select></td>
@@ -840,7 +853,7 @@ function renderAdminRooms(){
     <td class="toggle"><input type="checkbox" ${r.active!==false?"checked":""} onchange="updateRoomField(${i}, 'active', this.checked)"> פעיל</td>
     <td><button class="danger" type="button" onclick="deleteRoom(${i})">מחיקה</button></td>
   </tr>`).join("");
-  box.innerHTML = `<table><tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>${rows}</table>`;
+  box.innerHTML = alertHtml + `<table><tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>${rows}</table>`;
 }
 async function updateRoomField(index, field, value){
   const arr = rooms();
@@ -850,12 +863,125 @@ async function updateRoomField(index, field, value){
     if(!value) return alert("שם חדר לא יכול להיות ריק");
     arr[index].id = value.replace(/\s/g,"");
   }
+
+  // כיבוי חדר שיש בו שיבוצים → ניסיון שיבוץ-מחדש אוטומטי לפני הכיבוי
+  if(field === "active" && value === false){
+    await deactivateRoomWithReassign(arr[index].id);
+    renderAdminRooms(); // מסנכרן את תיבת הסימון עם המצב בפועל (כולל ביטול)
+    return;
+  }
+
   arr[index][field] = value;
   saveLocalRooms(arr);
   renderRooms();
   renderAdminRooms();
   try{ await saveRoomToRemote(arr[index]); syncMsg("פרטי החדר נשמרו ב־Google Sheets.", "ok"); }
   catch(e){ syncMsg("פרטי החדר נשמרו מקומית בלבד: " + e.message, "err"); }
+}
+
+/* ---------- כיבוי חדר עם שיבוץ-מחדש אוטומטי ----------
+   מנסה להעביר כל שיבוץ בחדר שמכבים לחדר פעיל אחר שפנוי באותו יום/שעה
+   (מעדיף חדר מאותו סוג). מציג סיכום לאישור, ומה שלא נמצא לו חדר — נרשם כהתראה. */
+async function deactivateRoomWithReassign(roomId){
+  if(apiUrl()){ try{ await loadRemoteData(); }catch(e){} } // תכנון על הנתונים העדכניים
+
+  const allRooms = rooms();
+  const deadRoom = allRooms.find(r => String(r.id) === String(roomId));
+  if(!deadRoom) return;
+
+  const allBookings = bookings();
+  const affected = allBookings.filter(b => String(b.roomId) === String(roomId));
+  const candidates = allRooms.filter(r => r.active !== false && String(r.id) !== String(roomId));
+
+  // מודל תפוסה: כל השיבוצים מלבד אלה שעוזבים את החדר המכובה; נוסיף שיבוצים ככל שמשבצים
+  let working = allBookings.filter(b => String(b.roomId) !== String(roomId)).map(b => ({...b}));
+  const usedIn = (room, f) => working.filter(b =>
+    String(b.roomId) === String(room.id) &&
+    b.day === f.day &&
+    semesterClash(b.semester, f.semester) &&
+    overlap(b.start, b.end, f.start, f.end)
+  ).length;
+
+  const moves = [];      // {booking, to}
+  const unplaced = [];
+  for(const bk of affected){
+    const f = {day: bk.day, semester: bk.semester, start: bk.start, end: bk.end};
+    const free = candidates
+      .map(r => ({room:r, free: r.stations - usedIn(r, f)}))
+      .filter(x => x.free > 0)
+      .sort((a,b) => {
+        const at = a.room.type === deadRoom.type ? 0 : 1;
+        const bt = b.room.type === deadRoom.type ? 0 : 1;
+        if(at !== bt) return at - bt;         // מעדיף אותו סוג
+        return b.free - a.free;               // ואז הכי הרבה מקום פנוי
+      });
+    if(free.length){
+      const target = free[0].room;
+      moves.push({booking: bk, to: target});
+      working.push({...bk, roomId: target.id, roomName: target.name});
+    } else {
+      unplaced.push(bk);
+    }
+  }
+
+  // סיכום לאישור
+  if(moves.length || unplaced.length){
+    let summary = `כיבוי חדר ${deadRoom.name}:\n\n`;
+    if(moves.length){
+      summary += `יועברו ${moves.length} שיבוצים:\n`;
+      summary += moves.map(m => `• ${m.booking.teacherName} — ${m.booking.day} ${m.booking.start}-${m.booking.end} ← חדר ${m.to.name}`).join("\n") + "\n\n";
+    }
+    if(unplaced.length){
+      summary += `⚠ ללא חדר חלופי (${unplaced.length}) — יישארו בחדר ותידרש התייחסות:\n`;
+      summary += unplaced.map(b => `• ${b.teacherName} — ${b.day} ${b.start}-${b.end}`).join("\n") + "\n\n";
+    }
+    summary += "לאשר כיבוי וביצוע ההעברות?";
+    if(!confirm(summary)) return;   // ביטול — לא מכבים ולא מעבירים
+  }
+
+  // ביצוע ההעברות: קודם מעדכן מקומית (לעבודה גם ללא גיליון), ואז בגיליון add→delete (לא מאבד נתונים)
+  const localArr = bookings();
+  for(const m of moves){
+    const li = localArr.findIndex(b => String(b.id) === String(m.booking.id));
+    if(li !== -1){ localArr[li] = {...localArr[li], roomId: m.to.id, roomName: m.to.name}; }
+  }
+  saveLocalBookings(localArr);
+
+  if(apiUrl()){
+    for(const m of moves){
+      const newRec = {
+        id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now())+Math.random().toString(36).slice(2,8),
+        createdAt: m.booking.createdAt || new Date().toISOString(),
+        teacherName: m.booking.teacherName, semester: m.booking.semester,
+        day: m.booking.day, start: m.booking.start, end: m.booking.end,
+        roomId: m.to.id, roomName: m.to.name
+      };
+      try{ await saveBookingToRemote(newRec); await deleteBookingRemote(m.booking.id); }
+      catch(e){ syncMsg("חלק מההעברות לא נשמרו בגיליון: " + e.message, "err"); }
+    }
+  }
+
+  // כיבוי החדר עצמו
+  const roomsNow = rooms();
+  const idx = roomsNow.findIndex(r => String(r.id) === String(roomId));
+  if(idx !== -1){
+    roomsNow[idx].active = false;
+    saveLocalRooms(roomsNow);
+    try{ if(apiUrl()) await saveRoomToRemote(roomsNow[idx]); }catch(e){}
+  }
+
+  if(apiUrl()){ try{ await loadRemoteData(); }catch(e){} } // סנכרון מהגיליון
+
+  reassignAlerts = unplaced.map(b => ({teacherName:b.teacherName, semester:b.semester, day:b.day, start:b.start, end:b.end, roomName: deadRoom.name}));
+
+  renderRooms();
+  renderAdminRooms();
+  if(!document.getElementById('bookingsBox').classList.contains('hidden')) renderBookingsTable();
+
+  const parts = [];
+  if(moves.length) parts.push(`${moves.length} שיבוצים הועברו`);
+  if(unplaced.length) parts.push(`${unplaced.length} ללא חלופה (ראה התראה למעלה)`);
+  syncMsg(`חדר ${deadRoom.name} כובה. ` + (parts.join(", ") || "לא היו שיבוצים."), unplaced.length ? "err" : "ok");
 }
 async function addRoom(){
   const name = document.getElementById("newRoomName").value.trim();
