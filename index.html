@@ -845,6 +845,15 @@ function renderAdminRooms(){
       <button class="ghost" type="button" onclick="clearReassignAlerts()">הבנתי, הסתר</button>
     </div>`;
   }
+  let orphanHtml = "";
+  const orphans = orphanRoomIds();
+  if(orphans.length){
+    orphanHtml = `<div class="reassignAlert">
+      <b>יש שיבוצים בחדרים שאינם ברשימה (${orphans.join(", ")}):</b>
+      <div style="margin-top:8px">אפשר להעביר אותם אוטומטית לחדרים פנויים אחרים.</div>
+      <button class="primary" type="button" style="margin-top:10px" onclick="reassignOrphans()">שבץ מחדש שיבוצים מחדרים שאינם ברשימה</button>
+    </div>`;
+  }
   const rows = arr.map((r,i)=>`<tr class="${r.active===false?'inactive':''}">
     <td><input value="${esc(r.name)}" onchange="updateRoomField(${i}, 'name', this.value)"></td>
     <td><select onchange="updateRoomField(${i}, 'type', this.value)"><option value="single" ${r.type==="single"?"selected":""}>יחיד</option><option value="shared" ${r.type==="shared"?"selected":""}>כמה עמדות</option></select></td>
@@ -853,7 +862,7 @@ function renderAdminRooms(){
     <td class="toggle"><input type="checkbox" ${r.active!==false?"checked":""} onchange="updateRoomField(${i}, 'active', this.checked)"> פעיל</td>
     <td><button class="danger" type="button" onclick="deleteRoom(${i})">מחיקה</button></td>
   </tr>`).join("");
-  box.innerHTML = alertHtml + `<table><tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>${rows}</table>`;
+  box.innerHTML = alertHtml + orphanHtml + `<table><tr><th>חדר</th><th>סוג</th><th>עמדות</th><th>מידע כניסה</th><th>פעיל לשנה</th><th></th></tr>${rows}</table>`;
 }
 async function updateRoomField(index, field, value){
   const arr = rooms();
@@ -882,37 +891,41 @@ async function updateRoomField(index, field, value){
 /* ---------- כיבוי חדר עם שיבוץ-מחדש אוטומטי ----------
    מנסה להעביר כל שיבוץ בחדר שמכבים לחדר פעיל אחר שפנוי באותו יום/שעה
    (מעדיף חדר מאותו סוג). מציג סיכום לאישור, ומה שלא נמצא לו חדר — נרשם כהתראה. */
-async function deactivateRoomWithReassign(roomId){
+// ליבה כללית: מעבירה את שיבוצי חדר נתון לחדרים אחרים. עובדת גם על חדר שאינו ברשימה (יתום).
+// opts: { label, preferType, deactivate }
+async function reassignFromRoom(roomId, opts){
+  opts = opts || {};
+  const label = opts.label || String(roomId);
+  const preferType = opts.preferType || null;
+  const deactivate = !!opts.deactivate;
+
   if(apiUrl()){ try{ await loadRemoteData(); }catch(e){} } // תכנון על הנתונים העדכניים
 
   const allRooms = rooms();
-  const deadRoom = allRooms.find(r => String(r.id) === String(roomId));
-  if(!deadRoom) return;
-
   const allBookings = bookings();
   const affected = allBookings.filter(b => String(b.roomId) === String(roomId));
-  const candidates = allRooms.filter(r => r.active !== false && String(r.id) !== String(roomId));
+  if(!affected.length && !deactivate) return;
 
-  // מודל תפוסה: כל השיבוצים מלבד אלה שעוזבים את החדר המכובה; נוסיף שיבוצים ככל שמשבצים
+  const candidates = allRooms.filter(r => r.active !== false && String(r.id) !== String(roomId));
   let working = allBookings.filter(b => String(b.roomId) !== String(roomId)).map(b => ({...b}));
   const usedIn = (room, f) => working.filter(b =>
     String(b.roomId) === String(room.id) &&
-    b.day === f.day &&
-    semesterClash(b.semester, f.semester) &&
+    b.day === f.day && semesterClash(b.semester, f.semester) &&
     overlap(b.start, b.end, f.start, f.end)
   ).length;
 
-  const moves = [];      // {booking, to}
-  const unplaced = [];
+  const moves = [], unplaced = [];
   for(const bk of affected){
     const f = {day: bk.day, semester: bk.semester, start: bk.start, end: bk.end};
     const free = candidates
       .map(r => ({room:r, free: r.stations - usedIn(r, f)}))
       .filter(x => x.free > 0)
       .sort((a,b) => {
-        const at = a.room.type === deadRoom.type ? 0 : 1;
-        const bt = b.room.type === deadRoom.type ? 0 : 1;
-        if(at !== bt) return at - bt;         // מעדיף אותו סוג
+        if(preferType){
+          const at = a.room.type === preferType ? 0 : 1;
+          const bt = b.room.type === preferType ? 0 : 1;
+          if(at !== bt) return at - bt;       // מעדיף אותו סוג
+        }
         return b.free - a.free;               // ואז הכי הרבה מקום פנוי
       });
     if(free.length){
@@ -924,22 +937,23 @@ async function deactivateRoomWithReassign(roomId){
     }
   }
 
-  // סיכום לאישור
   if(moves.length || unplaced.length){
-    let summary = `כיבוי חדר ${deadRoom.name}:\n\n`;
+    let summary = (deactivate ? `כיבוי חדר ${label}:` : `שיבוץ מחדש של שיבוצי חדר ${label}:`) + "\n\n";
     if(moves.length){
       summary += `יועברו ${moves.length} שיבוצים:\n`;
       summary += moves.map(m => `• ${m.booking.teacherName} — ${m.booking.day} ${m.booking.start}-${m.booking.end} ← חדר ${m.to.name}`).join("\n") + "\n\n";
     }
     if(unplaced.length){
-      summary += `⚠ ללא חדר חלופי (${unplaced.length}) — יישארו בחדר ותידרש התייחסות:\n`;
+      summary += `⚠ ללא חדר חלופי (${unplaced.length}) — יישארו כפי שהם ותידרש התייחסות:\n`;
       summary += unplaced.map(b => `• ${b.teacherName} — ${b.day} ${b.start}-${b.end}`).join("\n") + "\n\n";
     }
-    summary += "לאשר כיבוי וביצוע ההעברות?";
-    if(!confirm(summary)) return;   // ביטול — לא מכבים ולא מעבירים
+    summary += "לאשר?";
+    if(!confirm(summary)) return;   // ביטול — לא משנים כלום
+  } else if(!deactivate){
+    return;
   }
 
-  // ביצוע ההעברות: קודם מעדכן מקומית (לעבודה גם ללא גיליון), ואז בגיליון add→delete (לא מאבד נתונים)
+  // ביצוע: קודם מקומית (עובד גם ללא גיליון), ואז בגיליון add→delete (לא מאבד נתונים)
   const localArr = bookings();
   for(const m of moves){
     const li = localArr.findIndex(b => String(b.id) === String(m.booking.id));
@@ -961,18 +975,18 @@ async function deactivateRoomWithReassign(roomId){
     }
   }
 
-  // כיבוי החדר עצמו
-  const roomsNow = rooms();
-  const idx = roomsNow.findIndex(r => String(r.id) === String(roomId));
-  if(idx !== -1){
-    roomsNow[idx].active = false;
-    saveLocalRooms(roomsNow);
-    try{ if(apiUrl()) await saveRoomToRemote(roomsNow[idx]); }catch(e){}
+  if(deactivate){
+    const roomsNow = rooms();
+    const idx = roomsNow.findIndex(r => String(r.id) === String(roomId));
+    if(idx !== -1){ roomsNow[idx].active = false; saveLocalRooms(roomsNow); try{ if(apiUrl()) await saveRoomToRemote(roomsNow[idx]); }catch(e){} }
   }
 
   if(apiUrl()){ try{ await loadRemoteData(); }catch(e){} } // סנכרון מהגיליון
 
-  reassignAlerts = unplaced.map(b => ({teacherName:b.teacherName, semester:b.semester, day:b.day, start:b.start, end:b.end, roomName: deadRoom.name}));
+  // צבירת התראות (מצטרף לקיימות — חשוב כשמטפלים בכמה חדרים ברצף)
+  reassignAlerts = reassignAlerts.concat(
+    unplaced.map(b => ({teacherName:b.teacherName, semester:b.semester, day:b.day, start:b.start, end:b.end, roomName: b.roomName || label}))
+  );
 
   renderRooms();
   renderAdminRooms();
@@ -981,7 +995,31 @@ async function deactivateRoomWithReassign(roomId){
   const parts = [];
   if(moves.length) parts.push(`${moves.length} שיבוצים הועברו`);
   if(unplaced.length) parts.push(`${unplaced.length} ללא חלופה (ראה התראה למעלה)`);
-  syncMsg(`חדר ${deadRoom.name} כובה. ` + (parts.join(", ") || "לא היו שיבוצים."), unplaced.length ? "err" : "ok");
+  syncMsg((deactivate ? `חדר ${label} כובה. ` : `חדר ${label}: `) + (parts.join(", ") || "לא היו שיבוצים."), unplaced.length ? "err" : "ok");
+}
+
+async function deactivateRoomWithReassign(roomId){
+  const r = rooms().find(x => String(x.id) === String(roomId));
+  await reassignFromRoom(roomId, { label: r ? r.name : String(roomId), preferType: r ? r.type : null, deactivate: true });
+}
+
+/* ---------- חדרים "יתומים": יש להם שיבוצים אך אינם ברשימת החדרים ---------- */
+function orphanRoomIds(){
+  const known = new Set(rooms().map(r => String(r.id)));
+  const seen = [];
+  bookings().forEach(b => { const id = String(b.roomId); if(id && !known.has(id) && seen.indexOf(id) === -1) seen.push(id); });
+  return seen;
+}
+async function reassignOrphans(){
+  const ids = orphanRoomIds();
+  if(!ids.length){ syncMsg("אין שיבוצים מחדרים שאינם ברשימה.", "ok"); return; }
+  reassignAlerts = [];
+  for(const id of ids){
+    const b = bookings().find(x => String(x.roomId) === String(id));
+    const label = (b && b.roomName) ? b.roomName : id;
+    await reassignFromRoom(id, { label, preferType: null, deactivate: false });
+  }
+  renderAdminRooms();
 }
 async function addRoom(){
   const name = document.getElementById("newRoomName").value.trim();
