@@ -249,6 +249,18 @@
         <p id="syncStatus" class="small"></p>
       </div>
 
+      <div class="adminBlock">
+        <h2>החלפת סיסמת ניהול</h2>
+        <p class="small">הסיסמה מאוחסנת בשרת (Google Apps Script) ולא בקוד. החלפה כאן מעדכנת אותה מיידית לכל המנהלים.</p>
+        <div class="row3">
+          <div><label>סיסמה נוכחית</label><input id="curPass" type="password" autocomplete="off"></div>
+          <div><label>סיסמה חדשה</label><input id="newPass1" type="password" autocomplete="new-password"></div>
+          <div><label>אימות סיסמה חדשה</label><input id="newPass2" type="password" autocomplete="new-password"></div>
+        </div>
+        <div class="actions"><button class="primary" type="button" id="changePassBtn" onclick="changeAdminPassword()">החלף סיסמה</button></div>
+        <p id="changePassMsg" class="small"></p>
+      </div>
+
       <p class="small">כאן ניתן לקבוע אילו חדרים רלוונטיים לשנת הלימודים, לשנות פרטי חדרים קיימים ולהוסיף חדרים חדשים. השינויים יישמרו ב־Google Sheets כאשר מוגדר חיבור.</p>
       <div class="actions">
         <button class="secondary" type="button" onclick="renderAdminRooms()">רענון רשימת חדרים</button>
@@ -831,6 +843,32 @@ function adminLogout(){
   document.getElementById("adminPanel").classList.add("hidden");
   document.getElementById("adminUser").value = "";
   document.getElementById("adminPass").value = "";
+}
+async function changeAdminPassword(){
+  const cur = document.getElementById("curPass").value.trim();
+  const p1  = document.getElementById("newPass1").value.trim();
+  const p2  = document.getElementById("newPass2").value.trim();
+  const msg = document.getElementById("changePassMsg");
+  const btn = document.getElementById("changePassBtn");
+  const show = (t, ok) => { msg.textContent = t; msg.style.color = ok ? "#1a7f37" : "#c0392b"; };
+  if(!apiUrl()) return show("לא מוגדר חיבור לגיליון — לא ניתן להחליף סיסמה.", false);
+  if(!cur)            return show("יש להזין את הסיסמה הנוכחית.", false);
+  if(p1.length < 4)   return show("הסיסמה החדשה חייבת להכיל לפחות 4 תווים.", false);
+  if(p1 !== p2)       return show("הסיסמה החדשה ואימותה אינם תואמים.", false);
+  if(p1 === cur)      return show("הסיסמה החדשה זהה לנוכחית.", false);
+  btn.disabled = true; btn.textContent = "מחליף...";
+  try{
+    await api("changePassword", {adminPass: cur, newPass: p1});  // השרת מאמת את הנוכחית ומעדכן
+    ADMIN_PASS = p1;                                             // ממשיכים מחוברים עם החדשה
+    document.getElementById("curPass").value = "";
+    document.getElementById("newPass1").value = "";
+    document.getElementById("newPass2").value = "";
+    show("הסיסמה הוחלפה בהצלחה.", true);
+  }catch(e){
+    show("החלפת הסיסמה נכשלה: " + (e.message || "ודא/י שהסיסמה הנוכחית נכונה ושהשרת עודכן."), false);
+  }finally{
+    btn.disabled = false; btn.textContent = "החלף סיסמה";
+  }
 }
 let reassignAlerts = [];   // שיבוצים שלא נמצא להם חדר חלופי בעת כיבוי חדר
 function clearReassignAlerts(){ reassignAlerts = []; renderAdminRooms(); }
